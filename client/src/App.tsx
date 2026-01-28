@@ -16,10 +16,10 @@ import Clients from "@/pages/Clients";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
-function ProtectedRoute({ 
-  component: Component, 
-  adminOnly = false 
-}: { 
+function ProtectedRoute({
+  component: Component,
+  adminOnly = false
+}: {
   component: () => JSX.Element;
   adminOnly?: boolean;
 }) {
@@ -78,7 +78,7 @@ function Router() {
           <Route path="/" component={() => <Redirect to={defaultRoute} />} />
           <Route path="/login" component={() => <Redirect to={defaultRoute} />} />
           <Route path="/reportes" component={() => <ProtectedRoute component={Reportes} adminOnly />} />
-          <Route path="/inventory" component={() => <ProtectedRoute component={Inventory} adminOnly />} />
+          <Route path="/inventory" component={() => <ProtectedRoute component={Inventory} />} />
           <Route path="/purchases" component={() => <ProtectedRoute component={Purchases} adminOnly />} />
           <Route path="/purchases/create" component={() => <ProtectedRoute component={CreatePurchase} adminOnly />} />
           <Route path="/work-orders" component={() => <ProtectedRoute component={WorkOrders} />} />

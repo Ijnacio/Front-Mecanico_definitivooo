@@ -8,7 +8,7 @@ export interface CounterSale {
   total_venta: number;
   costo_perdida: number;
   comentario: string | null;
-  comprador: string | null;
+  vendedor: string | null;
   createdByName: string;
   createdAt: string;
   detalles: CounterSaleDetail[];
@@ -30,7 +30,7 @@ export interface CounterSaleDetail {
 
 export interface CreateCounterSaleDTO {
   tipo_movimiento: "VENTA" | "PERDIDA" | "USO_INTERNO";
-  comprador?: string;
+  vendedor?: string;
   comentario?: string;
   items: {
     sku: string;
@@ -46,10 +46,10 @@ export function useCounterSales(tipo?: "VENTA" | "PERDIDA" | "USO_INTERNO") {
     queryKey: ["counter-sales", tipo],
     queryFn: async () => {
       try {
-        const url = tipo 
+        const url = tipo
           ? getApiUrl(`/counter-sales?tipo=${tipo}`)
           : getApiUrl("/counter-sales");
-        
+
         const response = await fetch(url, {
           headers: getAuthHeaders(),
         });

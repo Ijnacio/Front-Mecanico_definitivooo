@@ -15,6 +15,7 @@ import { useProducts, useCreateProduct, useDeleteProduct, useUpdateProduct } fro
 import { useCategories } from "@/hooks/use-categories";
 import { VehicleModelMultiSelect } from "@/components/VehicleModelMultiSelect";
 import type { VehicleModel } from "@/hooks/use-vehicle-models";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Inventory() {
   const [search, setSearch] = useState("");
@@ -25,23 +26,25 @@ export default function Inventory() {
   const { data: allProducts = [], isLoading } = useProducts();
   const { data: categories = [] } = useCategories();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN" || user?.role === "administrador";
 
   // Filtrar productos
   let products = allProducts.filter(p => {
     // Filtro de búsqueda
-    const matchesSearch = 
-      (p.sku?.toLowerCase() || "").includes(search.toLowerCase()) || 
+    const matchesSearch =
+      (p.sku?.toLowerCase() || "").includes(search.toLowerCase()) ||
       (p.nombre?.toLowerCase() || "").includes(search.toLowerCase()) ||
       (p.marca?.toLowerCase() || "").includes(search.toLowerCase());
-    
+
     // Filtro de categoría
-    const matchesCategory = categoryFilter === "all" || 
+    const matchesCategory = categoryFilter === "all" ||
       (p.categoria?.nombre || "") === categoryFilter;
-    
+
     // Filtro de marca
-    const matchesBrand = brandFilter === "all" || 
+    const matchesBrand = brandFilter === "all" ||
       (p.marca?.toLowerCase() || "") === brandFilter.toLowerCase();
-    
+
     // Filtro de stock
     let matchesStock = true;
     if (stockFilter === "low") {
@@ -49,16 +52,16 @@ export default function Inventory() {
     } else if (stockFilter === "good") {
       matchesStock = p.stock_actual >= p.stock_minimo;
     }
-    
+
     return matchesSearch && matchesCategory && matchesBrand && matchesStock;
   });
-  
+
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Inventario de Repuestos" 
+      <PageHeader
+        title="Inventario de Repuestos"
         description=""
-        action={<AddProductDialog />}
+        action={isAdmin ? <AddProductDialog /> : undefined}
       />
 
       {/* Buscador y Filtros */}
@@ -68,7 +71,7 @@ export default function Inventory() {
           {!searchFocused && !search && (
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           )}
-          <Input 
+          <Input
             placeholder=""
             className="h-12 pl-14 text-base bg-slate-50 border-slate-200 focus:bg-white transition-colors rounded-lg"
             value={search}
@@ -133,13 +136,13 @@ export default function Inventory() {
               <TableHead className="font-display font-bold text-slate-900 h-14">Marca</TableHead>
               <TableHead className="font-display font-bold text-slate-900 h-14">Stock</TableHead>
               <TableHead className="font-display font-bold text-slate-900 h-14">Precio Venta</TableHead>
-              <TableHead className="w-[100px] h-14"></TableHead>
+              {isAdmin && <TableHead className="w-[100px] h-14"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-48 text-center">
+                <TableCell colSpan={isAdmin ? 9 : 8} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                     <p>Cargando inventario...</p>
@@ -148,7 +151,7 @@ export default function Inventory() {
               </TableRow>
             ) : products?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-48 text-center">
+                <TableCell colSpan={isAdmin ? 9 : 8} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                     <PackageOpen className="w-12 h-12 text-slate-300" />
                     <p>No se encontraron productos.</p>
@@ -171,13 +174,15 @@ function ProductRow({ product }: { product: any }) {
   const [editOpen, setEditOpen] = useState(false);
   const { toast } = useToast();
   const deleteMutation = useDeleteProduct();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN" || user?.role === "administrador";
 
   const handleDelete = () => {
     if (confirm(`¿Estás seguro de eliminar el producto ${product.sku}?`)) {
       deleteMutation.mutate(product.id, {
         onSuccess: () => {
-          toast({ 
-            title: "Producto eliminado", 
+          toast({
+            title: "Producto eliminado",
             description: `${product.sku} ha sido eliminado del inventario`,
             className: "bg-red-600 text-white border-none"
           });
@@ -209,7 +214,7 @@ function ProductRow({ product }: { product: any }) {
             <span className="text-slate-400 text-xs">Sin categoría</span>
           )}
         </TableCell>
-        
+
         {/* COLUMNA DE COMPATIBILIDAD */}
         <TableCell className="max-w-[200px]">
           {product.modelosCompatibles && product.modelosCompatibles.length > 0 ? (
@@ -229,14 +234,13 @@ function ProductRow({ product }: { product: any }) {
             <span className="text-slate-400 text-xs">Sin modelos</span>
           )}
         </TableCell>
-        
+
         <TableCell>
           {product.calidad ? (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-              product.calidad.includes('Alta') || product.calidad.includes('Cerámica') ? 'bg-green-100 text-green-700' :
-              product.calidad.includes('Media') || product.calidad.includes('Semimetálica') ? 'bg-yellow-100 text-yellow-700' :
-              'bg-red-100 text-red-700'
-            }`}>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${product.calidad.includes('Alta') || product.calidad.includes('Cerámica') ? 'bg-green-100 text-green-700' :
+                product.calidad.includes('Media') || product.calidad.includes('Semimetálica') ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-red-100 text-red-700'
+              }`}>
               {product.calidad}
             </span>
           ) : (
@@ -246,7 +250,7 @@ function ProductRow({ product }: { product: any }) {
         <TableCell className="font-medium text-slate-900">
           {product.marca || <span className="text-slate-400">Sin marca</span>}
         </TableCell>
-        
+
         {/* COLUMNA DE STOCK */}
         <TableCell>
           <div className="flex items-center gap-2">
@@ -269,36 +273,38 @@ function ProductRow({ product }: { product: any }) {
           </span>
         </TableCell>
 
-        <TableCell>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setEditOpen(true)}
-              className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700"
-              title="Editar"
-            >
-              <Pencil className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="h-8 w-8 text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700"
-              title="Eliminar"
-            >
-              {deleteMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-        </TableCell>
+        {isAdmin && (
+          <TableCell>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setEditOpen(true)}
+                className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700"
+                title="Editar"
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                className="h-8 w-8 text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700"
+                title="Eliminar"
+              >
+                {deleteMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </TableCell>
+        )}
       </TableRow>
-      
-      <EditProductDialog 
+
+      <EditProductDialog
         product={product}
         open={editOpen}
         onOpenChange={setEditOpen}
@@ -331,12 +337,12 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
       ...data,
       modelosCompatiblesIds: selectedModels.map(m => m.id),
     };
-    
+
     updateMutation.mutate({ id: product.id, ...payload }, {
       onSuccess: () => {
         onOpenChange(false);
-        toast({ 
-          title: "Producto actualizado", 
+        toast({
+          title: "Producto actualizado",
           description: `${data.sku} ha sido actualizado correctamente`,
           className: "bg-green-600 text-white border-none"
         });
@@ -446,7 +452,7 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
             {/* Campo de Compatibilidad */}
             <FormItem>
               <FormLabel>Compatibilidad (Modelos de Vehículos)</FormLabel>
-              <VehicleModelMultiSelect 
+              <VehicleModelMultiSelect
                 selectedModels={selectedModels}
                 onModelsChange={setSelectedModels}
               />
@@ -458,13 +464,13 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
                 <DollarSign className="w-4 h-4 text-blue-600" />
                 <h4 className="font-medium text-sm text-blue-900">Precios y Stock</h4>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <FormLabel className="text-xs text-muted-foreground">Precio Neto (Sin IVA)</FormLabel>
-                  <Input 
-                    type="number" 
-                    placeholder="0" 
+                  <Input
+                    type="number"
+                    placeholder="0"
                     defaultValue={Math.round(product.precio_venta / 1.19)}
                     onChange={handleNetPriceChange}
                     className="bg-white"
@@ -478,10 +484,10 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
                     <FormItem>
                       <FormLabel className="text-xs font-bold text-slate-700">Precio Venta (Con IVA)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          {...field} 
-                          onChange={e => field.onChange(parseInt(e.target.value))} 
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={e => field.onChange(parseInt(e.target.value))}
                           className="bg-white font-bold text-slate-900 border-blue-200 focus:border-blue-400"
                         />
                       </FormControl>
@@ -567,16 +573,16 @@ function AddProductDialog() {
       ...data,
       modelosCompatiblesIds: selectedModels.map(m => m.id),
     };
-    
+
     createMutation.mutate(payload, {
       onSuccess: () => {
         setOpen(false);
         form.reset();
         setSelectedModels([]);
-        toast({ 
-          title: "Producto creado exitosamente", 
+        toast({
+          title: "Producto creado exitosamente",
           description: `${data.sku} ha sido agregado al inventario`,
-          className: "bg-green-600 text-white border-none" 
+          className: "bg-green-600 text-white border-none"
         });
       },
       onError: (error: any) => {
@@ -691,7 +697,7 @@ function AddProductDialog() {
             {/* Campo de Compatibilidad */}
             <FormItem>
               <FormLabel>Compatibilidad (Modelos de Vehículos)</FormLabel>
-              <VehicleModelMultiSelect 
+              <VehicleModelMultiSelect
                 selectedModels={selectedModels}
                 onModelsChange={setSelectedModels}
               />
@@ -703,14 +709,14 @@ function AddProductDialog() {
                 <DollarSign className="w-4 h-4 text-blue-600" />
                 <h4 className="font-medium text-sm text-blue-900">Precios y Stock</h4>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 {/* Campo Simulado para Neto */}
                 <div className="space-y-2">
                   <FormLabel className="text-xs text-muted-foreground">Precio Neto (Sin IVA)</FormLabel>
-                  <Input 
-                    type="number" 
-                    placeholder="0" 
+                  <Input
+                    type="number"
+                    placeholder="0"
                     onChange={handleNetPriceChange}
                     className="bg-white"
                   />
@@ -723,10 +729,10 @@ function AddProductDialog() {
                     <FormItem>
                       <FormLabel className="text-xs font-bold text-slate-700">Precio Venta (Con IVA)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          {...field} 
-                          onChange={e => field.onChange(parseInt(e.target.value))} 
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={e => field.onChange(parseInt(e.target.value))}
                           className="bg-white font-bold text-slate-900 border-blue-200 focus:border-blue-400"
                         />
                       </FormControl>

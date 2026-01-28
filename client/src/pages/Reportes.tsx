@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { es } from "date-fns/locale";
 import { useLocation } from "wouter";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -147,11 +148,11 @@ export default function Reportes() {
       {/* Cards de Caja Diaria */}
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <DollarSign className="w-4 h-4 text-primary" />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <DollarSign className="w-5 h-5 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-slate-900">Resumen de Caja</h2>
+            <h2 className="text-lg font-semibold text-slate-900 leading-none">Resumen de Caja</h2>
           </div>
 
           {/* Selector de Fecha con Popover */}
@@ -181,6 +182,7 @@ export default function Reportes() {
                 <Calendar
                   mode="single"
                   selected={selectedDate ? new Date(selectedDate + 'T12:00:00') : undefined}
+                  locale={es}
                   onSelect={(date) => {
                     if (date) {
                       const formatted = date.toISOString().split('T')[0];

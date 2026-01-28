@@ -21,6 +21,31 @@ const getAuthHeaders = () => {
   };
 };
 
+// Helper para decodificar el payload del JWT (sin verificar firma)
+const decodeJwtPayload = (token: string): User | null => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+
+    // El payload del JWT contiene los datos del usuario
+    return {
+      id: payload.sub || payload.id,
+      rut: payload.rut,
+      nombre: payload.nombre,
+      role: payload.role,
+    };
+  } catch {
+    return null;
+  }
+};
+
 export function useAuth() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -34,19 +59,18 @@ export function useAuth() {
           return null;
         }
 
-        const response = await fetch(getApiUrl("/auth/me"), {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        
-        if (!response.ok) {
-          localStorage.removeItem("access_token");
-          return null;
+        // En lugar de llamar a /auth/me (que no existe), decodificamos el token localmente
+        // Esto es seguro porque las llamadas subsiguientes al API fallarán si el token es inválido/expirado
+        const userFromToken = decodeJwtPayload(token);
+
+        if (userFromToken) {
+          // Opcional: Podríamos verificar la expiración aquí si el token tiene 'exp'
+          return userFromToken;
         }
-        
-        const data = await response.json();
-        return data;
+
+        // Si el token no tiene formato válido, lo eliminamos
+        localStorage.removeItem("access_token");
+        return null;
       } catch (error) {
         localStorage.removeItem("access_token");
         return null;
@@ -78,15 +102,15 @@ export function useAuth() {
       if (data.access_token) {
         localStorage.setItem("access_token", data.access_token);
       }
-      
+
       // Manejar diferentes formatos de respuesta
       // Nuevo backend: { access_token, user: { id, rut, nombre, role } }
       // Viejo backend: { id, rut, nombre, role } directamente
       const user = data.user || data;
-      
+
       // Guardar usuario en cache
       queryClient.setQueryData(["user"], user);
-      
+
       // Redirigir según el rol (compatible con ADMIN/administrador y WORKER/mecanico)
       const isAdmin = user.role === "ADMIN" || user.role === "administrador";
       if (isAdmin) {
