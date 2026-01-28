@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getApiUrl, getAuthHeaders } from "@/lib/api";
 
 export interface Category {
   id: string;
@@ -11,21 +12,11 @@ export interface CreateCategoryDTO {
   descripcion?: string;
 }
 
-const getAuthToken = () => localStorage.getItem("access_token");
-
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
-
 export function useCategories() {
   return useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
-      const res = await fetch("/api/categories", {
+      const res = await fetch(getApiUrl("/categories"), {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Error al cargar categorías");
@@ -38,7 +29,7 @@ export function useCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateCategoryDTO) => {
-      const res = await fetch("/api/categories", {
+      const res = await fetch(getApiUrl("/categories"), {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),

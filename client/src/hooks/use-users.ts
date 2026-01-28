@@ -1,17 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
-// Helpers para autenticación
-function getAuthToken(): string | null {
-  return localStorage.getItem("access_token");
-}
-
-function getAuthHeaders(): HeadersInit {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+import { getApiUrl, getAuthHeaders } from "@/lib/api";
 
 interface User {
   id: string;
@@ -33,7 +21,7 @@ export function useUsers() {
   return useQuery({
     queryKey: ["/api/users"],
     queryFn: async () => {
-      const response = await fetch("/api/users", {
+      const response = await fetch(getApiUrl("/users"), {
         headers: getAuthHeaders(),
       });
       
@@ -55,7 +43,7 @@ export function useChangePassword() {
 
   return useMutation({
     mutationFn: async (data: ChangePasswordDTO) => {
-      const response = await fetch("/api/users/change-password", {
+      const response = await fetch(getApiUrl("/users/change-password"), {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -82,7 +70,7 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/users/${id}`, {
+      const response = await fetch(getApiUrl(`/users/${id}`), {
         method: "DELETE",
         headers: getAuthHeaders(),
       });

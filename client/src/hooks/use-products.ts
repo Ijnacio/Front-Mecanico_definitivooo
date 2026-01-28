@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getApiUrl, getAuthHeaders } from "@/lib/api";
 
 export interface Product {
   id: string;
@@ -33,23 +34,13 @@ export interface CreateProductDTO {
   modelos_compatibles_ids?: string[];
 }
 
-const getAuthToken = () => localStorage.getItem("access_token");
-
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
-
 export function useProducts(search?: string) {
   return useQuery<Product[]>({
     queryKey: ["products", search],
     queryFn: async () => {
       const url = search 
-        ? `/api/products?search=${encodeURIComponent(search)}`
-        : "/api/products";
+        ? getApiUrl(`/products?search=${encodeURIComponent(search)}`)
+        : getApiUrl("/products");
       
       const res = await fetch(url, { 
         headers: getAuthHeaders() 
@@ -66,7 +57,7 @@ export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateProductDTO) => {
-      const res = await fetch("/api/products", {
+      const res = await fetch(getApiUrl("/products"), {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -88,7 +79,7 @@ export function useUpdateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string } & Partial<CreateProductDTO>) => {
-      const res = await fetch(`/api/products/${id}`, {
+      const res = await fetch(getApiUrl(`/products/${id}`), {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -109,7 +100,7 @@ export function useDeleteProduct() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/products/${id}`, {
+      const res = await fetch(getApiUrl(`/products/${id}`), {
         method: "DELETE",
         headers: getAuthHeaders(),
       });

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { getApiUrl, getAuthHeaders as getApiAuthHeaders } from "@/lib/api";
 
 export interface User {
   id: string;
@@ -33,7 +34,7 @@ export function useAuth() {
           return null;
         }
 
-        const response = await fetch("/api/auth/me", {
+        const response = await fetch(getApiUrl("/auth/me"), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -57,7 +58,7 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { rut: string; password: string }) => {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(getApiUrl("/auth/login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

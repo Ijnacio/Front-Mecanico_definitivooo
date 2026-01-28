@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getApiUrl, getAuthHeaders } from "@/lib/api";
 
 export interface CounterSale {
   id: string;
@@ -38,16 +39,6 @@ export interface CreateCounterSaleDTO {
   }[];
 }
 
-const getAuthToken = () => localStorage.getItem("access_token");
-
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
-
 export function useCounterSales(tipo?: "VENTA" | "PERDIDA" | "USO_INTERNO") {
   const queryClient = useQueryClient();
 
@@ -56,8 +47,8 @@ export function useCounterSales(tipo?: "VENTA" | "PERDIDA" | "USO_INTERNO") {
     queryFn: async () => {
       try {
         const url = tipo 
-          ? `/api/counter-sales?tipo=${tipo}`
-          : "/api/counter-sales";
+          ? getApiUrl(`/counter-sales?tipo=${tipo}`)
+          : getApiUrl("/counter-sales");
         
         const response = await fetch(url, {
           headers: getAuthHeaders(),
@@ -77,7 +68,7 @@ export function useCounterSales(tipo?: "VENTA" | "PERDIDA" | "USO_INTERNO") {
 
   const createSaleMutation = useMutation({
     mutationFn: async (sale: CreateCounterSaleDTO) => {
-      const response = await fetch("/api/counter-sales", {
+      const response = await fetch(getApiUrl("/counter-sales"), {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(sale),

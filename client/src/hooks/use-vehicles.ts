@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getApiUrl, getAuthHeaders } from "@/lib/api";
 
 export interface Vehicle {
   id: string;
@@ -19,21 +20,11 @@ export interface CreateVehicleDTO {
   cliente_id: string;
 }
 
-const getAuthToken = () => localStorage.getItem("access_token");
-
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
-
 export function useVehicles() {
   return useQuery<Vehicle[]>({
     queryKey: ["vehicles"],
     queryFn: async () => {
-      const res = await fetch("/api/vehicles", {
+      const res = await fetch(getApiUrl("/vehicles"), {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Error al cargar vehículos");
@@ -46,7 +37,7 @@ export function useVehicle(id: string) {
   return useQuery<Vehicle>({
     queryKey: ["vehicles", id],
     queryFn: async () => {
-      const res = await fetch(`/api/vehicles/${id}`, {
+      const res = await fetch(getApiUrl(`/vehicles/${id}`), {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Error al cargar vehículo");
@@ -60,7 +51,7 @@ export function useCreateVehicle() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateVehicleDTO) => {
-      const res = await fetch("/api/vehicles", {
+      const res = await fetch(getApiUrl("/vehicles"), {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -81,7 +72,7 @@ export function useUpdateVehicle() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string } & Partial<CreateVehicleDTO>) => {
-      const res = await fetch(`/api/vehicles/${id}`, {
+      const res = await fetch(getApiUrl(`/vehicles/${id}`), {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -102,7 +93,7 @@ export function useDeleteVehicle() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/vehicles/${id}`, {
+      const res = await fetch(getApiUrl(`/vehicles/${id}`), {
         method: "DELETE",
         headers: getAuthHeaders(),
       });

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { getApiUrl, getAuthHeaders } from "@/lib/api";
 
 export interface LowStockProduct {
   id: string;
@@ -58,22 +59,12 @@ export interface SearchResult {
   }[];
 }
 
-const getAuthToken = () => localStorage.getItem("access_token");
-
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
-
 export function useLowStockReport() {
   return useQuery<LowStockReport>({
     queryKey: ["reports", "low-stock"],
     queryFn: async () => {
       try {
-        const response = await fetch("/api/reports/low-stock", {
+        const response = await fetch(getApiUrl("/reports/low-stock"), {
           headers: getAuthHeaders(),
         });
 
@@ -105,8 +96,8 @@ export function useDailyCashReport(fecha?: string) {
     queryFn: async () => {
       try {
         const url = fecha 
-          ? `/api/reports/daily-cash?fecha=${fecha}`
-          : "/api/reports/daily-cash";
+          ? getApiUrl(`/reports/daily-cash?fecha=${fecha}`)
+          : getApiUrl("/reports/daily-cash");
         
         const response = await fetch(url, {
           headers: getAuthHeaders(),
@@ -154,7 +145,7 @@ export function useGlobalSearch(query: string) {
       }
 
       try {
-        const response = await fetch(`/api/reports/search?q=${encodeURIComponent(query)}`, {
+        const response = await fetch(getApiUrl(`/reports/search?q=${encodeURIComponent(query)}`), {
           headers: getAuthHeaders(),
         });
 

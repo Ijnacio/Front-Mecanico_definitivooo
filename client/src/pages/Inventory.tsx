@@ -11,7 +11,8 @@ import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { useProducts, useCreateProduct, useDeleteProduct } from "@/hooks/use-products";
+import { useProducts, useCreateProduct, useDeleteProduct, useUpdateProduct } from "@/hooks/use-products";
+import { useCategories } from "@/hooks/use-categories";
 
 export default function Inventory() {
   const [search, setSearch] = useState("");
@@ -20,6 +21,7 @@ export default function Inventory() {
   const [brandFilter, setBrandFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const { data: allProducts = [], isLoading } = useProducts();
+  const { data: categories = [] } = useCategories();
   const { toast } = useToast();
 
   // Filtrar productos
@@ -86,9 +88,9 @@ export default function Inventory() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las Categorías</SelectItem>
-              <SelectItem value="Frenos">Frenos</SelectItem>
-              <SelectItem value="Aceites">Aceites</SelectItem>
-              <SelectItem value="Líquidos">Líquidos</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.nombre}>{cat.nombre}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -281,45 +283,48 @@ function ProductRow({ product }: { product: any }) {
   );
 }
 
-const CATEGORIES = [
-  "Frenos",
-  "Aceite",
-  "Balatas",
-  "Accesorios",
-  "Repuestos",
-  "Otros",
-];
-
 function EditProductDialog({ product, open, onOpenChange }: { product: any; open: boolean; onOpenChange: (open: boolean) => void }) {
   const { toast } = useToast();
+  const { data: categories = [] } = useCategories();
+  const updateMutation = useUpdateProduct();
 
   const form = useForm({
     defaultValues: {
-      partNumber: product.partNumber,
-      compatibleBrand: product.compatibleBrand,
-      compatibleModel: product.compatibleModel,
-      year: product.year,
-      provider: product.provider,
-      stock: product.stock,
-      quality: product.quality,
-      price: product.price,
+      sku: product.sku,
+      nombre: product.nombre,
+      marca: product.marca || "",
+      calidad: product.calidad || "",
+      precio_venta: product.precio_venta,
+      stock_actual: product.stock_actual,
+      stock_minimo: product.stock_minimo,
+      categoria_id: product.categoria?.id || "",
     },
   });
 
   const onSubmit = (data: any) => {
-    console.log("Producto editado (demo):", data);
-    onOpenChange(false);
-    toast({ 
-      title: "Producto actualizado", 
-      description: `${data.partNumber} ha sido actualizado correctamente`,
-      className: "bg-green-600 text-white border-none"
+    updateMutation.mutate({ id: product.id, ...data }, {
+      onSuccess: () => {
+        onOpenChange(false);
+        toast({ 
+          title: "Producto actualizado", 
+          description: `${data.sku} ha sido actualizado correctamente`,
+          className: "bg-green-600 text-white border-none"
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error.message || "No se pudo actualizar el producto",
+          variant: "destructive"
+        });
+      }
     });
   };
 
   const handleNetPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const netPrice = parseInt(e.target.value) || 0;
     const grossPrice = Math.round(netPrice * 1.19);
-    form.setValue("price", grossPrice);
+    form.setValue("precio_venta", grossPrice);
   };
 
   return (
@@ -328,7 +333,7 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
         <DialogHeader>
           <DialogTitle className="font-display text-xl">Editar Producto</DialogTitle>
           <DialogDescription>
-            Modifique los detalles del producto {product.partNumber}
+            Modifique los detalles del producto {product.sku}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -336,10 +341,10 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="partNumber"
+                name="sku"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Código del Producto</FormLabel>
+                    <FormLabel>SKU</FormLabel>
                     <FormControl><Input {...field} placeholder="Ej: FRN-001" className="uppercase font-mono" /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -348,19 +353,45 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
 
               <FormField
                 control={form.control}
-                name="quality"
+                name="marca"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Marca</FormLabel>
+                    <FormControl><Input {...field} placeholder="Ej: Bosch" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="nombre"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre del Producto</FormLabel>
+                  <FormControl><Input {...field} placeholder="Ej: Pastillas de freno delanteras" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="categoria_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoría</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {CATEGORIES.map((cat) => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -368,51 +399,32 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
                   </FormItem>
                 )}
               />
-            </div>
-
-            <div className="space-y-2 p-4 bg-slate-50 rounded-lg border">
-              <h4 className="text-sm font-medium text-slate-700">Vehículos Compatibles</h4>
-              
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                <FormField
-                  control={form.control}
-                  name="compatibleBrand"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Marca</FormLabel>
-                      <FormControl><Input {...field} placeholder="Ej: Toyota" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="compatibleModel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Modelo</FormLabel>
-                      <FormControl><Input {...field} placeholder="Ej: Yaris" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
               <FormField
                 control={form.control}
-                name="year"
+                name="calidad"
                 render={({ field }) => (
-                  <FormItem className="mt-2">
-                    <FormLabel className="text-xs">Año(s)</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} placeholder="Ej: 2015" />
-                    </FormControl>
+                  <FormItem>
+                    <FormLabel>Calidad</FormLabel>
+                    <FormControl><Input {...field} placeholder="Ej: Alta, Media" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="calidad"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Calidad</FormLabel>
+                    <FormControl><Input {...field} placeholder="Ej: Alta, Media" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
+            {/* SECCIÓN PRECIOS Y STOCK */}
             <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-lg">
               <div className="flex items-center gap-2 mb-3">
                 <DollarSign className="w-4 h-4 text-blue-600" />
@@ -425,7 +437,7 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
                   <Input 
                     type="number" 
                     placeholder="0" 
-                    defaultValue={Math.round(product.price / 1.19)}
+                    defaultValue={Math.round(product.precio_venta / 1.19)}
                     onChange={handleNetPriceChange}
                     className="bg-white"
                   />
@@ -433,7 +445,7 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
 
                 <FormField
                   control={form.control}
-                  name="price"
+                  name="precio_venta"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-bold text-slate-700">Precio Venta (Con IVA)</FormLabel>
@@ -450,42 +462,49 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
                   )}
                 />
 
-                <div className="col-span-2 mt-2">
-                  <FormField
-                    control={form.control}
-                    name="stock"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Stock Actual</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="stock_actual"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stock Actual</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="stock_minimo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stock Mínimo</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
-
-            <FormField
-              control={form.control}
-              name="provider"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Proveedor</FormLabel>
-                  <FormControl><Input {...field} placeholder="Nombre del proveedor" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" className="btn-pill">
-                Guardar Cambios
+              <Button type="submit" className="btn-pill" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  "Guardar Cambios"
+                )}
               </Button>
             </div>
           </form>
@@ -498,34 +517,48 @@ function EditProductDialog({ product, open, onOpenChange }: { product: any; open
 function AddProductDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { data: categories = [] } = useCategories();
+  const createMutation = useCreateProduct();
 
   const form = useForm({
     defaultValues: {
-      partNumber: "",
-      compatibleBrand: "",
-      compatibleModel: "",
-      year: new Date().getFullYear(),
-      provider: "",
-      stock: 0,
-      quality: "Good",
-      price: 0,
+      sku: "",
+      nombre: "",
+      marca: "",
+      calidad: "",
+      precio_venta: 0,
+      stock_actual: 0,
+      stock_minimo: 0,
+      categoria_id: "",
     },
   });
 
   const onSubmit = (data: any) => {
-    console.log("Producto creado (demo):", data);
-    setOpen(false);
-    form.reset();
-    toast({ title: "Producto creado exitosamente", description: "En modo demo, los datos no se guardan", className: "bg-green-600 text-white border-none" });
+    createMutation.mutate(data, {
+      onSuccess: () => {
+        setOpen(false);
+        form.reset();
+        toast({ 
+          title: "Producto creado exitosamente", 
+          description: `${data.sku} ha sido agregado al inventario`,
+          className: "bg-green-600 text-white border-none" 
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error.message || "No se pudo crear el producto",
+          variant: "destructive"
+        });
+      }
+    });
   };
 
   // Función para calcular IVA automáticamente
   const handleNetPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const netPrice = parseInt(e.target.value) || 0;
     const grossPrice = Math.round(netPrice * 1.19); // Calcula IVA 19%
-    
-    // Actualizamos el campo visible 'price' (que sería el Bruto/Venta)
-    form.setValue("price", grossPrice);
+    form.setValue("precio_venta", grossPrice);
   };
 
   return (
@@ -548,10 +581,10 @@ function AddProductDialog() {
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="partNumber"
+                name="sku"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Código del Producto</FormLabel>
+                    <FormLabel>SKU</FormLabel>
                     <FormControl><Input {...field} placeholder="Ej: FRN-001" className="uppercase font-mono" /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -560,19 +593,45 @@ function AddProductDialog() {
 
               <FormField
                 control={form.control}
-                name="quality"
+                name="marca"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Marca</FormLabel>
+                    <FormControl><Input {...field} placeholder="Ej: Bosch" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="nombre"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre del Producto</FormLabel>
+                  <FormControl><Input {...field} placeholder="Ej: Pastillas de freno delanteras" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="categoria_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoría</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {CATEGORIES.map((cat) => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -580,45 +639,14 @@ function AddProductDialog() {
                   </FormItem>
                 )}
               />
-            </div>
-
-            <div className="space-y-2 p-4 bg-slate-50 rounded-lg border">
-              <h4 className="text-sm font-medium text-slate-700">Vehículos Compatibles</h4>
-              
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                <FormField
-                  control={form.control}
-                  name="compatibleBrand"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Marca</FormLabel>
-                      <FormControl><Input {...field} placeholder="Ej: Toyota" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="compatibleModel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Modelo</FormLabel>
-                      <FormControl><Input {...field} placeholder="Ej: Yaris" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
               <FormField
                 control={form.control}
-                name="year"
+                name="calidad"
                 render={({ field }) => (
-                  <FormItem className="mt-2">
-                    <FormLabel className="text-xs">Año(s)</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} placeholder="Ej: 2015" />
-                    </FormControl>
+                  <FormItem>
+                    <FormLabel>Calidad</FormLabel>
+                    <FormControl><Input {...field} placeholder="Ej: Alta, Media" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -646,7 +674,7 @@ function AddProductDialog() {
 
                 <FormField
                   control={form.control}
-                  name="price" // Usamos 'price' como el valor final con IVA
+                  name="precio_venta"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-bold text-slate-700">Precio Venta (Con IVA)</FormLabel>
@@ -663,39 +691,46 @@ function AddProductDialog() {
                   )}
                 />
 
-                <div className="col-span-2 mt-2">
-                  <FormField
-                    control={form.control}
-                    name="stock"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Stock Inicial</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="stock_actual"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stock Inicial</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="stock_minimo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stock Mínimo</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
-            <FormField
-              control={form.control}
-              name="provider"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Proveedor</FormLabel>
-                  <FormControl><Input {...field} placeholder="Nombre del proveedor" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <div className="flex justify-end pt-4">
-              <Button type="submit" className="w-full btn-pill">
-                Guardar Producto
+              <Button type="submit" className="w-full btn-pill" disabled={createMutation.isPending}>
+                {createMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  "Guardar Producto"
+                )}
               </Button>
             </div>
           </form>

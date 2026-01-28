@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getApiUrl, getAuthHeaders } from "@/lib/api";
 
 export interface Purchase {
   id: string;
@@ -41,22 +42,12 @@ export interface CreatePurchaseDTO {
   }[];
 }
 
-const getAuthToken = () => localStorage.getItem("access_token");
-
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
-
 export function usePurchases() {
   return useQuery<Purchase[]>({
     queryKey: ["purchases"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/purchases", { 
+        const res = await fetch(getApiUrl("/purchases"), { 
           headers: getAuthHeaders() 
         });
         if (!res.ok) {
@@ -92,7 +83,7 @@ export function useCreatePurchase() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreatePurchaseDTO) => {
-      const res = await fetch("/api/purchases", {
+      const res = await fetch(getApiUrl("/purchases"), {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -115,7 +106,7 @@ export function useDeletePurchase() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/purchases/${id}`, {
+      const res = await fetch(getApiUrl(`/purchases/${id}`), {
         method: "DELETE",
         headers: getAuthHeaders(),
       });

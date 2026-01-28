@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getApiUrl, getAuthHeaders } from "@/lib/api";
 
 export interface Provider {
   id: string;
@@ -17,21 +18,11 @@ export interface CreateProviderDTO {
   email?: string;
 }
 
-const getAuthToken = () => localStorage.getItem("access_token");
-
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
-
 export function useProviders() {
   return useQuery<Provider[]>({
     queryKey: ["providers"],
     queryFn: async () => {
-      const res = await fetch("/api/providers", {
+      const res = await fetch(getApiUrl("/providers"), {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Error al cargar proveedores");
@@ -44,7 +35,7 @@ export function useProvider(id: string) {
   return useQuery<Provider>({
     queryKey: ["providers", id],
     queryFn: async () => {
-      const res = await fetch(`/api/providers/${id}`, {
+      const res = await fetch(getApiUrl(`/providers/${id}`), {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Error al cargar proveedor");
@@ -58,7 +49,7 @@ export function useCreateProvider() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateProviderDTO) => {
-      const res = await fetch("/api/providers", {
+      const res = await fetch(getApiUrl("/providers"), {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -79,7 +70,7 @@ export function useUpdateProvider() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string } & Partial<CreateProviderDTO>) => {
-      const res = await fetch(`/api/providers/${id}`, {
+      const res = await fetch(getApiUrl(`/providers/${id}`), {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -100,7 +91,7 @@ export function useDeleteProvider() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/providers/${id}`, {
+      const res = await fetch(getApiUrl(`/providers/${id}`), {
         method: "DELETE",
         headers: getAuthHeaders(),
       });

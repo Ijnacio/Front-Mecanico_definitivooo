@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getApiUrl, getAuthHeaders } from "@/lib/api";
 
 export interface Client {
   id: string;
@@ -17,21 +18,11 @@ export interface CreateClientDTO {
   direccion?: string;
 }
 
-const getAuthToken = () => localStorage.getItem("access_token");
-
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
-
 export function useClients() {
   return useQuery<Client[]>({
     queryKey: ["clients"],
     queryFn: async () => {
-      const res = await fetch("/api/clients", {
+      const res = await fetch(getApiUrl("/clients"), {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Error al cargar clientes");
@@ -44,7 +35,7 @@ export function useCreateClient() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateClientDTO) => {
-      const res = await fetch("/api/clients", {
+      const res = await fetch(getApiUrl("/clients"), {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getApiUrl, getAuthHeaders } from "@/lib/api";
 
 export interface VehicleModel {
   id: string;
@@ -13,21 +14,11 @@ export interface CreateVehicleModelDTO {
   anio: number;
 }
 
-const getAuthToken = () => localStorage.getItem("access_token");
-
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
-
 export function useVehicleModels() {
   return useQuery<VehicleModel[]>({
     queryKey: ["vehicle-models"],
     queryFn: async () => {
-      const res = await fetch("/api/vehicle-models", {
+      const res = await fetch(getApiUrl("/vehicle-models"), {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Error al cargar modelos de vehículos");
@@ -41,7 +32,7 @@ export function useSearchVehicleModels(query: string) {
     queryKey: ["vehicle-models", "search", query],
     queryFn: async () => {
       if (!query) return [];
-      const res = await fetch(`/api/vehicle-models/search?q=${encodeURIComponent(query)}`, {
+      const res = await fetch(getApiUrl(`/vehicle-models/search?q=${encodeURIComponent(query)}`), {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Error al buscar modelos");
@@ -55,7 +46,7 @@ export function useVehicleModelBrands() {
   return useQuery<string[]>({
     queryKey: ["vehicle-models", "brands"],
     queryFn: async () => {
-      const res = await fetch("/api/vehicle-models/marcas", {
+      const res = await fetch(getApiUrl("/vehicle-models/marcas"), {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Error al cargar marcas");
@@ -69,7 +60,7 @@ export function useVehicleModelsByBrand(marca: string) {
     queryKey: ["vehicle-models", "brand", marca],
     queryFn: async () => {
       if (!marca) return [];
-      const res = await fetch(`/api/vehicle-models/marcas/${encodeURIComponent(marca)}/modelos`, {
+      const res = await fetch(getApiUrl(`/vehicle-models/marcas/${encodeURIComponent(marca)}/modelos`), {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Error al cargar modelos");
@@ -83,7 +74,7 @@ export function useCreateVehicleModel() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateVehicleModelDTO) => {
-      const res = await fetch("/api/vehicle-models", {
+      const res = await fetch(getApiUrl("/vehicle-models"), {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -104,7 +95,7 @@ export function useUpdateVehicleModel() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string } & Partial<CreateVehicleModelDTO>) => {
-      const res = await fetch(`/api/vehicle-models/${id}`, {
+      const res = await fetch(getApiUrl(`/vehicle-models/${id}`), {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -125,7 +116,7 @@ export function useDeleteVehicleModel() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/vehicle-models/${id}`, {
+      const res = await fetch(getApiUrl(`/vehicle-models/${id}`), {
         method: "DELETE",
         headers: getAuthHeaders(),
       });

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getApiUrl, getAuthHeaders } from "@/lib/api";
 
 export interface WorkOrder {
   id: string;
@@ -52,23 +53,13 @@ export interface CreateWorkOrderDTO {
   }[];
 }
 
-const getAuthToken = () => localStorage.getItem("access_token");
-
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
-
 export function useWorkOrders(search?: string) {
   return useQuery<WorkOrder[]>({
     queryKey: ["work-orders", search],
     queryFn: async () => {
       const url = search 
-        ? `/api/work-orders?search=${encodeURIComponent(search)}`
-        : "/api/work-orders";
+        ? getApiUrl(`/work-orders?search=${encodeURIComponent(search)}`)
+        : getApiUrl("/work-orders");
       
       const res = await fetch(url, { 
         headers: getAuthHeaders() 
@@ -109,7 +100,7 @@ export function useServicesCatalog() {
   return useQuery<string[]>({
     queryKey: ["services-catalog"],
     queryFn: async () => {
-      const res = await fetch("/api/work-orders/services-catalog", { 
+      const res = await fetch(getApiUrl("/work-orders/services-catalog"), { 
         headers: getAuthHeaders() 
       });
       if (!res.ok) throw new Error("Error al cargar catálogo de servicios");
@@ -122,7 +113,7 @@ export function useCreateWorkOrder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateWorkOrderDTO) => {
-      const res = await fetch("/api/work-orders", {
+      const res = await fetch(getApiUrl("/work-orders"), {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -145,7 +136,7 @@ export function useUpdateWorkOrder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string } & Partial<CreateWorkOrderDTO>) => {
-      const res = await fetch(`/api/work-orders/${id}`, {
+      const res = await fetch(getApiUrl(`/work-orders/${id}`), {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
@@ -166,7 +157,7 @@ export function useDeleteWorkOrder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/work-orders/${id}`, { 
+      const res = await fetch(getApiUrl(`/work-orders/${id}`), { 
         method: "DELETE", 
         headers: getAuthHeaders() 
       });
