@@ -39,10 +39,10 @@ export interface CreatePurchaseDTO {
     nombre: string;
     marca?: string;
     calidad?: string;
-    modelos_compatibles_ids?: string[];
     cantidad: number;
     precio_costo: number;
-    precio_venta_sugerido?: number;
+    precio_venta_sugerido: number;
+    modelos_compatibles_ids?: string[];
   }[];
 }
 
@@ -60,22 +60,43 @@ export function usePurchases() {
         }
         const data = await res.json();
         
-        // Adaptar datos del backend antiguo
-        return data.map((p: any) => ({
-          id: p.id?.toString() || p.id,
-          numero_factura: p.invoiceNumber || p.numero_factura || null,
-          fecha: p.date || p.fecha || new Date().toISOString(),
-          monto_neto: p.totalCost ? p.totalCost * 0.81 : (p.monto_neto || 0),
-          monto_iva: p.totalCost ? p.totalCost * 0.19 : (p.monto_iva || 0),
-          monto_total: p.totalCost || p.monto_total || 0,
-          proveedor: {
-            id: "1",
-            nombre: p.supplier || p.proveedor?.nombre || "Proveedor General",
-          },
-          detalles: [],
-          createdByName: "Sistema",
-          createdAt: p.date || p.createdAt || new Date().toISOString(),
-        }));
+        console.log("📋 ============ COMPRAS RECIBIDAS DEL BACKEND ============");
+        console.log("📋 Cantidad de compras:", data.length);
+        console.log("📋 Primera compra (ejemplo):", JSON.stringify(data[0], null, 2));
+        console.log("📋 =====================================================");
+        
+        // Adaptar datos del backend
+        return data.map((p: any) => {
+          console.log("🔍 Procesando compra:", {
+            id: p.id,
+            monto_neto: p.monto_neto,
+            monto_iva: p.monto_iva,
+            monto_total: p.monto_total,
+            items: p.items,
+            detalles: p.detalles,
+          });
+          
+          // Calcular totales correctamente
+          const montoNeto = p.monto_neto || 0;
+          const montoIva = p.monto_iva || Math.round(montoNeto * 0.19);
+          const montoTotal = p.monto_total || (montoNeto + montoIva);
+          
+          return {
+            id: p.id?.toString() || p.id,
+            numero_factura: p.numero_factura || p.numero_documento || null,
+            fecha: p.fecha || p.createdAt || new Date().toISOString(),
+            monto_neto: montoNeto,
+            monto_iva: montoIva,
+            monto_total: montoTotal,
+            proveedor: {
+              id: p.proveedor?.id || "1",
+              nombre: p.proveedor?.nombre || p.proveedor_nombre || "Proveedor General",
+            },
+            detalles: p.items || p.detalles || [],
+            createdByName: p.createdBy?.nombre || p.createdByName || "Sistema",
+            createdAt: p.createdAt || new Date().toISOString(),
+          };
+        });
       } catch (error) {
         return [];
       }
@@ -87,19 +108,35 @@ export function useCreatePurchase() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreatePurchaseDTO) => {
+      console.log("📦 Payload compra enviado:", JSON.stringify(data, null, 2));
+      
       const res = await fetch(getApiUrl("/purchases"), {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
+      
+      console.log("📥 Respuesta backend - Status:", res.status);
+      
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Error al crear compra");
+        const errorText = await res.text();
+        console.error("❌ Error del backend:", errorText);
+        let errorMessage = "Error al crear compra";
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorMessage;
+        } catch {}
+        throw new Error(errorMessage);
       }
-      return res.json();
+      
+      const responseData = await res.json();
+      console.log("✅ Compra creada:", responseData);
+      return responseData;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["purchases"] });
+    onSuccess: async () => {
+      // Invalidar y refrescar automáticamente
+      await queryClient.invalidateQueries({ queryKey: ["purchases"] });
+      await queryClient.refetchQueries({ queryKey: ["purchases"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["reports"] });
     },
@@ -110,14 +147,27 @@ export function useDeletePurchase() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      console.log("🗑️ Intentando eliminar compra con ID:", id);
+      
       const res = await fetch(getApiUrl(`/purchases/${id}`), {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
+      
+      console.log("📥 Respuesta eliminación - Status:", res.status);
+      
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Error al eliminar compra");
+        const errorText = await res.text();
+        console.error("❌ Error al eliminar:", errorText);
+        let errorMessage = "Error al eliminar compra";
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorMessage;
+        } catch {}
+        throw new Error(errorMessage);
       }
+      
+      console.log("✅ Compra eliminada correctamente");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchases"] });

@@ -31,14 +31,14 @@ export function useSearchVehicleModels(query: string) {
   return useQuery<VehicleModel[]>({
     queryKey: ["vehicle-models", "search", query],
     queryFn: async () => {
-      if (!query) return [];
+      if (!query || query.length < 2) return [];
       const res = await fetch(getApiUrl(`/vehicle-models/search?q=${encodeURIComponent(query)}`), {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Error al buscar modelos");
       return res.json();
     },
-    enabled: !!query,
+    enabled: !!query && query.length >= 2,
   });
 }
 

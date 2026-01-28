@@ -21,6 +21,8 @@ export default function CreatePurchase() {
   const [providerOpen, setProviderOpen] = useState(false);
   const [createProviderModalOpen, setCreateProviderModalOpen] = useState(false);
   const [searchProvider, setSearchProvider] = useState("");
+  const [selectedProviderId, setSelectedProviderId] = useState<string>("");
+  const [selectedProviderName, setSelectedProviderName] = useState<string>("");
   const [productSearchOpen, setProductSearchOpen] = useState(false);
   const [productSearchValue, setProductSearchValue] = useState("");
   const [productSearchFocused, setProductSearchFocused] = useState(false);
@@ -30,12 +32,11 @@ export default function CreatePurchase() {
   const createProviderMutation = useCreateProvider();
   const { toast } = useToast();
 
-  const form = useForm<CreatePurchaseDTO>({
+  const form = useForm({
     defaultValues: {
-      proveedor_nombre: "",
       numero_documento: "",
-      tipo_documento: "FACTURA",
-      items: [],
+      tipo_documento: "FACTURA" as const,
+      items: [] as any[],
     },
   });
 
@@ -58,13 +59,19 @@ export default function CreatePurchase() {
     (p.marca?.toLowerCase() || "").includes(productSearchValue.toLowerCase())
   );
 
-  // Calcular total automáticamente
+  // Calcular totales automáticamente
   const watchItems = form.watch("items");
-  const calculatedTotal = (watchItems as any[]).reduce((sum, item) => sum + (item.precio_costo * item.cantidad), 0);
+  const calculatedNeto = (watchItems as any[]).reduce((sum, item) => {
+    const cantidad = parseInt(item.cantidad) || 0;
+    const precio = parseInt(item.precio_costo) || 0;
+    return sum + (cantidad * precio);
+  }, 0);
+  const calculatedIVA = Math.round(calculatedNeto * 0.19);
+  const calculatedTotal = calculatedNeto + calculatedIVA;
 
-  const onSubmit = (data: CreatePurchaseDTO) => {
+  const onSubmit = (data: any) => {
     // Validar que haya un proveedor
-    if (!data.proveedor_nombre?.trim()) {
+    if (!selectedProviderName || !selectedProviderName.trim()) {
       toast({ 
         title: "Error", 
         description: "Debe seleccionar un proveedor",
@@ -83,7 +90,32 @@ export default function CreatePurchase() {
       return;
     }
     
-    createPurchase(data, {
+    // Construir payload según formato del backend real
+    const payload: CreatePurchaseDTO = {
+      proveedor_nombre: selectedProviderName,
+      numero_documento: data.numero_documento?.trim() || undefined,
+      tipo_documento: data.tipo_documento || "FACTURA",
+      items: data.items.map((item: any) => {
+        const parsedItem = {
+          sku: item.sku?.trim() || "",
+          nombre: item.nombre?.trim() || "",
+          marca: item.marca?.trim() || undefined,
+          calidad: item.calidad?.trim() || undefined,
+          cantidad: parseInt(item.cantidad) || 1,
+          precio_costo: parseInt(item.precio_costo) || 0,
+          precio_venta_sugerido: 0,
+          modelos_compatibles_ids: undefined,
+        };
+        console.log("📦 Item procesado:", parsedItem);
+        return parsedItem;
+      }),
+    };
+    
+    console.log("📦 Payload completo a enviar:", JSON.stringify(payload, null, 2));
+    console.log("📊 Total de items:", payload.items.length);
+    console.log("📊 Total cantidad:", payload.items.reduce((sum, i) => sum + i.cantidad, 0));
+    
+    createPurchase(payload, {
       onSuccess: () => {
         form.reset();
         setLocation("/purchases");
@@ -111,7 +143,6 @@ export default function CreatePurchase() {
       calidad: "",
       cantidad: 1,
       precio_costo: 0,
-      precio_venta_sugerido: 0,
     });
     setProductSearchOpen(false);
     setProductSearchValue("");
@@ -154,122 +185,107 @@ export default function CreatePurchase() {
               Datos de la Compra
             </h2>
 
-            <div className="grid grid-cols-3 gap-6">
-              <FormField
-                control={form.control}
-                name="proveedor_nombre"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-slate-700">Proveedor *</FormLabel>
-                    <Popover open={providerOpen} onOpenChange={setProviderOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                              "w-full justify-between h-11 font-normal bg-white border-slate-300 hover:bg-slate-50",
-                              !field.value && "text-slate-400"
-                            )}
-                          >
-                            <span className="truncate">{field.value || "Seleccionar proveedor"}</span>
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-slate-400" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[400px] p-0 border-slate-200 shadow-lg" align="start">
-                        <Command className="rounded-lg">
-                          <CommandInput 
-                            placeholder="Buscar proveedor..." 
-                            value={searchProvider}
-                            onValueChange={setSearchProvider}
-                            className="h-10 border-none"
-                          />
-                          <CommandList className="max-h-[250px]">
-                            <CommandEmpty className="py-6 text-center text-sm text-slate-500">
-                              No se encontró proveedor
-                            </CommandEmpty>
-                            <CommandGroup>
-                              {filteredProviders.map((provider) => (
-                                <CommandItem
-                                  key={provider.id}
-                                  value={provider.nombre}
-                                  onSelect={() => {
-                                    form.setValue("proveedor_nombre", provider.nombre);
-                                    setProviderOpen(false);
-                                    setSearchProvider("");
-                                  }}
-                                  className="cursor-pointer"
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4 text-primary",
-                                      provider.nombre === field.value ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
+            <div>
+              <div>
+                <FormLabel className="text-sm font-semibold text-slate-700">Seleccione un Proveedor *</FormLabel>
+                <p className="text-xs text-slate-500 mt-1 mb-3">Busque y seleccione el proveedor de esta compra</p>
+                <Popover open={providerOpen} onOpenChange={setProviderOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between h-12 font-normal border-2 transition-all",
+                        selectedProviderName 
+                          ? "bg-pink-50 border-pink-200 hover:bg-pink-100 text-slate-900" 
+                          : "bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-400"
+                      )}
+                    >
+                      <span className="truncate">{selectedProviderName || "Haga clic para seleccionar un proveedor"}</span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-slate-400" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[500px] p-0 border-slate-200 shadow-xl" align="start">
+                    <div className="bg-gradient-to-r from-pink-50 to-rose-50 px-4 py-3 border-b border-pink-100">
+                      <h4 className="font-semibold text-slate-900 text-sm">Buscar Proveedor</h4>
+                      <p className="text-xs text-slate-600 mt-0.5">Seleccione de la lista o busque por nombre</p>
+                    </div>
+                    <Command className="rounded-lg">
+                      <CommandInput 
+                        placeholder="Escriba para buscar..." 
+                        value={searchProvider}
+                        onValueChange={setSearchProvider}
+                        className="h-11 border-none text-base"
+                      />
+                      <CommandList className="max-h-[300px]">
+                        <CommandEmpty className="py-8 text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <Search className="w-8 h-8 text-slate-300" />
+                            <p className="text-sm text-slate-500">No se encontró ningún proveedor</p>
+                            <p className="text-xs text-slate-400">Intente con otro nombre o cree uno nuevo</p>
+                          </div>
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {filteredProviders.map((provider) => {
+                            const isSelected = provider.id === selectedProviderId;
+                            return (
+                              <CommandItem
+                                key={provider.id}
+                                value={provider.nombre}
+                                onSelect={() => {
+                                  setSelectedProviderId(provider.id);
+                                  setSelectedProviderName(provider.nombre);
+                                  setProviderOpen(false);
+                                  setSearchProvider("");
+                                }}
+                                className={cn(
+                                  "cursor-pointer py-3 px-3 my-1 mx-2 rounded-md transition-all",
+                                  isSelected 
+                                    ? "bg-pink-50 border-2 border-pink-200" 
+                                    : "hover:bg-slate-100 border-2 border-transparent"
+                                )}
+                              >
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <div className={cn(
+                                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0",
+                                    isSelected ? "bg-pink-300 text-white" : "bg-slate-200 text-slate-600"
+                                  )}>
+                                    {provider.nombre.charAt(0).toUpperCase()}
+                                  </div>
                                   <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-slate-900 truncate">{provider.nombre}</div>
+                                    <div className="font-semibold text-slate-900 truncate">{provider.nombre}</div>
                                     {(provider.telefono || provider.email) && (
-                                      <div className="text-xs text-slate-500 truncate">
-                                        {provider.telefono || provider.email}
+                                      <div className="text-xs text-slate-500 truncate mt-0.5 flex items-center gap-2">
+                                        {provider.telefono && (
+                                          <span className="font-mono">{provider.telefono}</span>
+                                        )}
+                                        {provider.telefono && provider.email && <span>•</span>}
+                                        {provider.email && (
+                                          <span>{provider.email}</span>
+                                        )}
                                       </div>
                                     )}
                                   </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    <button
-                      type="button"
-                      onClick={() => setCreateProviderModalOpen(true)}
-                      className="text-xs text-slate-500 hover:text-primary transition-colors mt-1.5 block"
-                    >
-                      + Crear nuevo proveedor
-                    </button>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="tipo_documento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-slate-700">Tipo de Documento *</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="h-11 bg-white border-slate-300">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="border-slate-200">
-                        <SelectItem value="FACTURA">Factura</SelectItem>
-                        <SelectItem value="BOLETA">Boleta</SelectItem>
-                        <SelectItem value="NOTA">Nota</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="numero_documento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-slate-700">Número de Documento</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Ej: F-12345" className="h-11 bg-white border-slate-300" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                                  {isSelected && (
+                                    <Check className="h-5 w-5 text-pink-500 flex-shrink-0" />
+                                  )}
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <button
+                  type="button"
+                  onClick={() => setCreateProviderModalOpen(true)}
+                  className="text-sm text-pink-600 hover:text-pink-700 hover:underline transition-colors mt-2 block font-medium"
+                >
+                  + Crear nuevo proveedor
+                </button>
+              </div>
             </div>
           </div>
 
@@ -323,7 +339,10 @@ export default function CreatePurchase() {
                 <PopoverContent 
                   className="w-[600px] p-0 border-slate-200 shadow-xl" 
                   align="start"
+                  side="bottom"
+                  sideOffset={8}
                   onOpenAutoFocus={(e) => e.preventDefault()}
+                  avoidCollisions={false}
                 >
                   <div className="max-h-[400px] overflow-y-auto">
                     {filteredProducts.length === 0 ? (
@@ -420,12 +439,14 @@ export default function CreatePurchase() {
                         <div className="col-span-2">
                           <FormLabel className="text-xs font-medium text-slate-600 uppercase tracking-wide">Cantidad *</FormLabel>
                           <Input 
-                            type="text"
+                            type="number"
+                            min="1"
                             placeholder="1"
-                            className="h-10 mt-1.5 bg-white border-slate-300 text-center font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="h-10 mt-1.5 bg-white border-slate-300 text-center font-medium"
                             {...form.register(`items.${index}.cantidad`, { 
+                              required: "La cantidad es requerida",
                               valueAsNumber: true,
-                              setValueAs: (v) => v === '' ? 0 : parseInt(v)
+                              min: 1
                             })}
                           />
                         </div>
@@ -499,6 +520,24 @@ export default function CreatePurchase() {
                     </div>
                   );
                 })}
+                
+                {/* Botón para agregar más ítems */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => append({
+                    sku: "",
+                    nombre: "",
+                    marca: "",
+                    calidad: "",
+                    cantidad: 1,
+                    precio_costo: 0,
+                  })}
+                  className="w-full h-12 border-2 border-dashed border-slate-300 hover:border-primary hover:bg-primary/5 text-slate-600 hover:text-primary transition-colors"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Agregar otro producto
+                </Button>
               </div>
             )}
           </div>
@@ -506,11 +545,27 @@ export default function CreatePurchase() {
           {/* Footer: Total y Acciones */}
           <div className="bg-white rounded-lg border border-slate-200 shadow-md p-6 sticky bottom-4 z-40">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 mb-1">Total de la Compra</p>
-                <p className="text-4xl font-bold text-slate-900">
-                  ${calculatedTotal.toLocaleString('es-CL')}
-                </p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-6">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">Neto</p>
+                    <p className="text-lg font-semibold text-slate-700">
+                      ${calculatedNeto.toLocaleString('es-CL')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">IVA (19%)</p>
+                    <p className="text-lg font-semibold text-slate-700">
+                      ${calculatedIVA.toLocaleString('es-CL')}
+                    </p>
+                  </div>
+                  <div className="border-l border-slate-300 pl-6">
+                    <p className="text-xs text-slate-500 mb-0.5">Total</p>
+                    <p className="text-3xl font-bold text-primary">
+                      ${calculatedTotal.toLocaleString('es-CL')}
+                    </p>
+                  </div>
+                </div>
               </div>
               
               <div className="flex gap-3">
@@ -573,7 +628,7 @@ function CreateProviderModal({
   const form = useForm({
     defaultValues: {
       nombre: "",
-      telefono: "",
+      telefono: "+569",
       email: "",
     },
   });
@@ -607,21 +662,22 @@ function CreateProviderModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px]">
+      <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Crear proveedor</DialogTitle>
+          <DialogTitle className="text-xl font-bold">Crear Nuevo Proveedor</DialogTitle>
+          <p className="text-sm text-slate-500 mt-1">Complete los datos del proveedor</p>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 mt-4">
             <FormField
               control={form.control}
               name="nombre"
               rules={{ required: "El nombre es obligatorio" }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nombre *</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-slate-700">Nombre del Proveedor *</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Ej: Frenos Chile" />
+                    <Input {...field} placeholder="Ej: Frenos Chile" className="h-11 bg-slate-50 border-slate-200 focus:bg-white" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -633,10 +689,22 @@ function CreateProviderModal({
               name="telefono"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Teléfono (opcional)</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-slate-700">Teléfono</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Ej: +56912345678" />
+                    <Input 
+                      {...field} 
+                      placeholder="Ej: +56912345678"
+                      defaultValue="+569"
+                      className="h-11 bg-slate-50 border-slate-200 focus:bg-white font-mono"
+                      onFocus={(e) => {
+                        if (e.target.value === '' || e.target.value === '+569') {
+                          e.target.value = '+569';
+                          field.onChange('+569');
+                        }
+                      }}
+                    />
                   </FormControl>
+                  <p className="text-xs text-slate-500 mt-1">Opcional</p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -653,28 +721,29 @@ function CreateProviderModal({
               }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email (opcional)</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-slate-700">Correo Electrónico</FormLabel>
                   <FormControl>
-                    <Input {...field} type="email" placeholder="Ej: contacto@proveedor.cl" />
+                    <Input {...field} type="email" placeholder="Ej: contacto@proveedor.cl" className="h-11 bg-slate-50 border-slate-200 focus:bg-white" />
                   </FormControl>
+                  <p className="text-xs text-slate-500 mt-1">Opcional</p>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-3 pt-6">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
-                className="flex-1"
+                className="flex-1 h-11"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={createProviderMutation.isPending}
-                className="flex-1"
+                className="flex-1 h-11 bg-primary hover:bg-primary/90"
               >
                 {createProviderMutation.isPending ? (
                   <>
@@ -682,7 +751,7 @@ function CreateProviderModal({
                     Guardando...
                   </>
                 ) : (
-                  "Guardar proveedor"
+                  "Guardar Proveedor"
                 )}
               </Button>
             </div>

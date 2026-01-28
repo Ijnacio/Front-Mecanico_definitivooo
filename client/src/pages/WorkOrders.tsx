@@ -158,11 +158,14 @@ function WorkOrderRow({ workOrder }: { workOrder: any }) {
       </TableCell>
       <TableCell>
         <div className="space-y-1">
-          <p className="font-medium">{workOrder.patente_vehiculo || "Sin patente"}</p>
-          {workOrder.vehiculo && (
-            <p className="text-xs text-muted-foreground">
+          <p className="font-mono font-semibold text-slate-900">{workOrder.patente_vehiculo || "Sin patente"}</p>
+          {workOrder.vehiculo && workOrder.vehiculo.marca && workOrder.vehiculo.modelo && (
+            <p className="text-xs text-slate-600">
               {workOrder.vehiculo.marca} {workOrder.vehiculo.modelo}
             </p>
+          )}
+          {(!workOrder.vehiculo || !workOrder.vehiculo.marca) && (
+            <p className="text-xs text-slate-400 italic">Sin datos del vehículo</p>
           )}
         </div>
       </TableCell>
@@ -245,6 +248,16 @@ function CreateWorkOrderDialog() {
   };
 
   const onSubmit = (data: any) => {
+    // Validar campos obligatorios del vehículo
+    if (!data.vehiculo_patente || !data.vehiculo_marca || !data.vehiculo_modelo) {
+      toast({
+        title: "Campos requeridos",
+        description: "Debes completar Patente, Marca y Modelo del vehículo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Convertir los servicios seleccionados a items
     const items = Object.entries(services)
       .filter(([_, service]) => service.checked)
@@ -260,20 +273,27 @@ function CreateWorkOrderDialog() {
       numero_orden_papel: data.numero_orden_papel,
       realizado_por: data.realizado_por || undefined,
       revisado_por: data.revisado_por || undefined,
-      cliente: {
-        nombre: data.cliente_nombre,
-        rut: data.cliente_rut,
-        email: data.cliente_email || undefined,
-        telefono: data.cliente_telefono || undefined,
-      },
-      vehiculo: {
-        patente: data.vehiculo_patente,
-        marca: data.vehiculo_marca,
-        modelo: data.vehiculo_modelo,
-        kilometraje: data.vehiculo_km,
-      },
+      // Cliente - formato plano
+      cliente_nombre: data.cliente_nombre.trim(),
+      cliente_rut: data.cliente_rut.trim(),
+      cliente_email: data.cliente_email?.trim() || undefined,
+      cliente_telefono: data.cliente_telefono?.trim() || undefined,
+      // Vehículo - formato plano
+      vehiculo_patente: data.vehiculo_patente.trim(),
+      vehiculo_marca: data.vehiculo_marca.trim(),
+      vehiculo_modelo: data.vehiculo_modelo.trim(),
+      vehiculo_km: data.vehiculo_km || 0,
+      // Items
       items,
     };
+
+    console.log("🚗 Datos del vehículo a enviar:", {
+      patente: data.vehiculo_patente,
+      marca: data.vehiculo_marca,
+      modelo: data.vehiculo_modelo,
+      kilometraje: data.vehiculo_km,
+    });
+    console.log("📦 Payload completo:", payload);
 
     createWorkOrder(payload, {
       onSuccess: () => {
@@ -283,8 +303,21 @@ function CreateWorkOrderDialog() {
         });
         setOpen(false);
         form.reset();
+        // Resetear servicios también
+        setServices({
+          "Cambio Pastillas": { checked: false, precio: 0, descripcion: "" },
+          "Cambio Discos": { checked: false, precio: 0, descripcion: "" },
+          "Rectificado": { checked: false, precio: 0, descripcion: "" },
+          "Cambio Líquido Frenos": { checked: false, precio: 0, descripcion: "" },
+          "Revisión Sistema Completo": { checked: false, precio: 0, descripcion: "" },
+          "Cambio Zapatas Traseras": { checked: false, precio: 0, descripcion: "" },
+          "Purga Sistema Frenos": { checked: false, precio: 0, descripcion: "" },
+          "Revisión ABS": { checked: false, precio: 0, descripcion: "" },
+          "Otros": { checked: false, precio: 0, descripcion: "" },
+        });
       },
       onError: (error: any) => {
+        console.error("Error al crear orden:", error); // Debug
         toast({
           title: "Error",
           description: error.message || "No se pudo crear la orden de trabajo.",
@@ -434,9 +467,59 @@ function CreateWorkOrderDialog() {
                   name="vehiculo_patente"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Patente</FormLabel>
+                      <FormLabel className="flex items-center gap-1">
+                        Patente
+                        <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="AB-1234" {...field} />
+                        <Input 
+                          placeholder="AB-1234" 
+                          className="uppercase font-mono"
+                          required
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="vehiculo_marca"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Marca
+                        <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Toyota" 
+                          required
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="vehiculo_modelo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        Modelo
+                        <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Corolla" 
+                          required
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -459,34 +542,6 @@ function CreateWorkOrderDialog() {
                             field.onChange(parseInt(value) || 0);
                           }}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="vehiculo_marca"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Marca</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Toyota" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="vehiculo_modelo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Modelo</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Corolla" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
