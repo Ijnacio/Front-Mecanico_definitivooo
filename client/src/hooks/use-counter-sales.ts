@@ -38,6 +38,16 @@ export interface CreateCounterSaleDTO {
   }[];
 }
 
+const getAuthToken = () => localStorage.getItem("access_token");
+
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
+
 export function useCounterSales(tipo?: "VENTA" | "PERDIDA" | "USO_INTERNO") {
   const queryClient = useQueryClient();
 
@@ -50,7 +60,7 @@ export function useCounterSales(tipo?: "VENTA" | "PERDIDA" | "USO_INTERNO") {
           : "/api/counter-sales";
         
         const response = await fetch(url, {
-          credentials: "include",
+          headers: getAuthHeaders(),
         });
 
         if (!response.ok) {
@@ -69,10 +79,7 @@ export function useCounterSales(tipo?: "VENTA" | "PERDIDA" | "USO_INTERNO") {
     mutationFn: async (sale: CreateCounterSaleDTO) => {
       const response = await fetch("/api/counter-sales", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify(sale),
       });
 

@@ -34,27 +34,39 @@ export interface SearchResult {
     id: string;
     nombre: string;
     rut: string;
-    telefono: string;
-    email: string;
-    cantidad_ordenes: number;
+    telefono?: string;
+    email?: string;
+    cantidad_ordenes?: number;
   }[];
   vehiculos: {
     id: string;
     patente: string;
     marca: string;
     modelo: string;
-    anio: number;
+    anio?: number;
   }[];
   ordenes_recientes: {
     id: string;
-    numero_orden: number;
+    numero_orden?: number;
+    numero_orden_papel?: number;
     patente: string;
     cliente_nombre: string;
     fecha: string;
-    total: number;
-    estado: string;
+    total?: number;
+    total_cobrado?: number;
+    estado?: string;
   }[];
 }
+
+const getAuthToken = () => localStorage.getItem("access_token");
+
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
 
 export function useLowStockReport() {
   return useQuery<LowStockReport>({
@@ -62,7 +74,7 @@ export function useLowStockReport() {
     queryFn: async () => {
       try {
         const response = await fetch("/api/reports/low-stock", {
-          credentials: "include",
+          headers: getAuthHeaders(),
         });
 
         if (!response.ok) {
@@ -97,7 +109,7 @@ export function useDailyCashReport(fecha?: string) {
           : "/api/reports/daily-cash";
         
         const response = await fetch(url, {
-          credentials: "include",
+          headers: getAuthHeaders(),
         });
 
         if (!response.ok) {
@@ -143,7 +155,7 @@ export function useGlobalSearch(query: string) {
 
       try {
         const response = await fetch(`/api/reports/search?q=${encodeURIComponent(query)}`, {
-          credentials: "include",
+          headers: getAuthHeaders(),
         });
 
         if (!response.ok) {

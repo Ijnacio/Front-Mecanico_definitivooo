@@ -5,9 +5,20 @@ export interface User {
   id: string;
   rut: string;
   nombre: string;
-  name?: string; // Backend usa 'name' a veces
   role: "ADMIN" | "WORKER" | "administrador" | "mecanico";
 }
+
+// Helper para obtener el token del localStorage
+const getAuthToken = () => localStorage.getItem("access_token");
+
+// Helper para setear headers con autenticación
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
 
 export function useAuth() {
   const queryClient = useQueryClient();
@@ -17,21 +28,26 @@ export function useAuth() {
     queryKey: ["user"],
     queryFn: async () => {
       try {
+        const token = getAuthToken();
+        if (!token) {
+          return null;
+        }
+
         const response = await fetch("/api/auth/me", {
-          credentials: "include",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
         
         if (!response.ok) {
+          localStorage.removeItem("access_token");
           return null;
         }
         
         const data = await response.json();
-        // Normalizar el nombre si viene como 'name'
-        if (data.name && !data.nombre) {
-          data.nombre = data.name;
-        }
         return data;
       } catch (error) {
+        localStorage.removeItem("access_token");
         return null;
       }
     },
@@ -46,7 +62,6 @@ export function useAuth() {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
         body: JSON.stringify(credentials),
       });
 
@@ -58,11 +73,23 @@ export function useAuth() {
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["user"], data);
-      // Redirigir según el rol (compatible con backend antiguo y nuevo)
-      const isAdmin = data.role === "ADMIN" || data.role === "administrador";
+      // Guardar token en localStorage
+      if (data.access_token) {
+        localStorage.setItem("access_token", data.access_token);
+      }
+      
+      // Manejar diferentes formatos de respuesta
+      // Nuevo backend: { access_token, user: { id, rut, nombre, role } }
+      // Viejo backend: { id, rut, nombre, role } directamente
+      const user = data.user || data;
+      
+      // Guardar usuario en cache
+      queryClient.setQueryData(["user"], user);
+      
+      // Redirigir según el rol (compatible con ADMIN/administrador y WORKER/mecanico)
+      const isAdmin = user.role === "ADMIN" || user.role === "administrador";
       if (isAdmin) {
-        setLocation("/dashboard");
+        setLocation("/reportes");
       } else {
         setLocation("/work-orders"); // Workers van directo a órdenes de trabajo
       }
@@ -73,7 +100,7 @@ export function useAuth() {
     mutationFn: async () => {
       const response = await fetch("/api/auth/logout", {
         method: "POST",
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -83,6 +110,7 @@ export function useAuth() {
       return response.json();
     },
     onSuccess: () => {
+      localStorage.removeItem("access_token");
       queryClient.setQueryData(["user"], null);
       setLocation("/login");
     },
@@ -98,5 +126,6 @@ export function useAuth() {
     logout: logoutMutation.mutate,
     loginError: loginMutation.error?.message,
     isLoggingIn: loginMutation.isPending,
+    getAuthHeaders, // Exportar para usar en otros hooks
   };
 }

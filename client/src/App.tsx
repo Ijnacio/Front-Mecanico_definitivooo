@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Sidebar } from "@/components/Sidebar";
 import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/Dashboard";
+import Reportes from "@/pages/Reportes";
 import Inventory from "@/pages/Inventory";
 import Purchases from "@/pages/Purchases";
 import WorkOrders from "@/pages/WorkOrders";
@@ -67,7 +67,7 @@ function Router() {
 
   // Redirigir la ruta raíz según el rol
   const isAdmin = user?.role === "ADMIN" || user?.role === "administrador";
-  const defaultRoute = isAdmin ? "/dashboard" : "/work-orders";
+  const defaultRoute = isAdmin ? "/reportes" : "/work-orders";
 
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -76,7 +76,7 @@ function Router() {
         <Switch>
           <Route path="/" component={() => <Redirect to={defaultRoute} />} />
           <Route path="/login" component={() => <Redirect to={defaultRoute} />} />
-          <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} adminOnly />} />
+          <Route path="/reportes" component={() => <ProtectedRoute component={Reportes} adminOnly />} />
           <Route path="/inventory" component={() => <ProtectedRoute component={Inventory} adminOnly />} />
           <Route path="/purchases" component={() => <ProtectedRoute component={Purchases} adminOnly />} />
           <Route path="/work-orders" component={() => <ProtectedRoute component={WorkOrders} />} />

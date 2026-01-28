@@ -10,16 +10,16 @@ import { Badge } from "./ui/badge";
 
 // Links con roles permitidos
 const allLinks = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["ADMIN", "WORKER"] },
+  { href: "/reportes", label: "Reportes", icon: LayoutDashboard, roles: ["ADMIN", "WORKER"] },
   { href: "/inventory", label: "Inventario", icon: Package, roles: ["ADMIN", "WORKER"] },
-  { href: "/purchases", label: "Compras", icon: ShoppingCart, roles: ["ADMIN"] },
+  { href: "/purchases", label: "Proveedores", icon: ShoppingCart, roles: ["ADMIN"] },
   { href: "/work-orders", label: "Órdenes de Trabajo", icon: ClipboardList, roles: ["ADMIN", "WORKER"] },
   { href: "/counter-sales", label: "Ventas Mostrador", icon: TrendingUp, roles: ["ADMIN", "WORKER"] },
   { href: "/clients", label: "Clientes", icon: Users, roles: ["ADMIN", "WORKER"] },
 ];
 
 export function Sidebar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
   
@@ -46,23 +46,25 @@ export function Sidebar() {
           const isActive = location === link.href;
           const Icon = link.icon;
           return (
-            <Link key={link.href} href={link.href} className="no-underline">
-              <div
-                onClick={() => setOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200 cursor-pointer",
-                  isActive 
-                    ? "bg-primary text-white" 
-                    : "text-slate-400 hover:text-white hover:bg-slate-800"
-                )}
-              >
-                <Icon className={cn("w-5 h-5", isActive && "text-white")} />
-                <span className="font-medium">{link.label}</span>
-                {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                )}
-              </div>
-            </Link>
+            <div
+              key={link.href}
+              onClick={() => {
+                setOpen(false);
+                setLocation(link.href);
+              }}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200 cursor-pointer",
+                isActive 
+                  ? "bg-primary text-white" 
+                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+              )}
+            >
+              <Icon className={cn("w-5 h-5", isActive && "text-white")} />
+              <span className="font-medium">{link.label}</span>
+              {isActive && (
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              )}
+            </div>
           );
         })}
       </nav>

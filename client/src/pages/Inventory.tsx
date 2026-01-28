@@ -239,7 +239,7 @@ function ProductRow({ product }: { product: any }) {
         {/* COLUMNA DE PRECIO */}
         <TableCell>
           <span className="font-bold text-slate-900 text-sm">
-            ${product.precio_venta.toLocaleString('es-CL')}
+            ${(product.precio_venta || 0).toLocaleString('es-CL')}
           </span>
         </TableCell>
 

@@ -30,27 +30,35 @@ export interface PurchaseDetail {
 }
 
 export interface CreatePurchaseDTO {
-  proveedor_nombre: string;
-  numero_documento?: string;
-  tipo_documento: "FACTURA" | "INFORMAL";
+  proveedor_id: string;
+  numero_factura?: string;
   items: {
     sku: string;
     nombre: string;
-    marca?: string;
-    calidad?: string;
-    vehiculos_ids?: string[];
     cantidad: number;
-    precio_costo: number;
-    precio_venta_sugerido: number;
+    precio_unitario: number;
+    modelos_compatibles_ids?: string[];
   }[];
 }
+
+const getAuthToken = () => localStorage.getItem("access_token");
+
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
 
 export function usePurchases() {
   return useQuery<Purchase[]>({
     queryKey: ["purchases"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/purchases", { credentials: "include" });
+        const res = await fetch("/api/purchases", { 
+          headers: getAuthHeaders() 
+        });
         if (!res.ok) {
           // Si no existe, devolver array vacío
           return [];
@@ -86,9 +94,8 @@ export function useCreatePurchase() {
     mutationFn: async (data: CreatePurchaseDTO) => {
       const res = await fetch("/api/purchases", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(data),
-        credentials: "include",
       });
       if (!res.ok) {
         const error = await res.json();
@@ -110,7 +117,7 @@ export function useDeletePurchase() {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/purchases/${id}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
       if (!res.ok) {
         const error = await res.json();

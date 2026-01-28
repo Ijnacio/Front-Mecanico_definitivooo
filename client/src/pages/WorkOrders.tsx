@@ -75,7 +75,9 @@ export default function WorkOrders() {
             </SelectContent>
           </Select>
         </div>
+      </div>
 
+      <div className="card-industrial bg-white p-6">
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -206,23 +208,18 @@ function CreateWorkOrderDialog() {
   const { mutate: createWorkOrder, isPending } = useCreateWorkOrder();
   const { toast } = useToast();
 
-  const form = useForm<CreateWorkOrderDTO>({
+  const form = useForm({
     defaultValues: {
       numero_orden_papel: 0,
-      realizado_por: "",
-      revisado_por: "",
-      cliente: {
-        nombre: "",
-        rut: "",
-        telefono: "",
-      },
-      vehiculo: {
-        patente: "",
-        marca: "",
-        modelo: "",
-        kilometraje: 0,
-      },
-      items: [],
+      cliente_rut: "",
+      cliente_nombre: "",
+      cliente_telefono: "",
+      vehiculo_patente: "",
+      vehiculo_marca: "",
+      vehiculo_modelo: "",
+      vehiculo_anio: 2024,
+      vehiculo_km: 0,
+      items: [] as any[],
     },
   });
 
@@ -244,7 +241,7 @@ function CreateWorkOrderDialog() {
     }, 0);
   };
 
-  const onSubmit = (data: CreateWorkOrderDTO) => {
+  const onSubmit = (data: any) => {
     // Convertir los servicios seleccionados a items
     const items = Object.entries(services)
       .filter(([_, service]) => service.checked)
@@ -258,16 +255,24 @@ function CreateWorkOrderDialog() {
                         key === 'cambioPiola' ? 'Cambio Piola' :
                         key === 'revision' ? 'Revisión' :
                         'Otros',
-        descripcion: 'descripcion' in service ? service.descripcion : undefined,
+        descripcion: service.descripcion || '',
         precio: service.precio,
       }));
 
-    const dataWithItems = {
-      ...data,
+    const payload: CreateWorkOrderDTO = {
+      numero_orden_papel: data.numero_orden_papel,
+      cliente_rut: data.cliente_rut,
+      cliente_nombre: data.cliente_nombre,
+      cliente_telefono: data.cliente_telefono,
+      vehiculo_patente: data.vehiculo_patente,
+      vehiculo_marca: data.vehiculo_marca,
+      vehiculo_modelo: data.vehiculo_modelo,
+      vehiculo_anio: data.vehiculo_anio,
+      vehiculo_km: data.vehiculo_km,
       items,
     };
 
-    createWorkOrder(dataWithItems, {
+    createWorkOrder(payload, {
       onSuccess: () => {
         toast({
           title: "Orden Creada",
@@ -328,7 +333,7 @@ function CreateWorkOrderDialog() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="cliente.nombre"
+                  name="cliente_nombre"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Nombre Cliente</FormLabel>
@@ -341,7 +346,7 @@ function CreateWorkOrderDialog() {
                 />
                 <FormField
                   control={form.control}
-                  name="cliente.rut"
+                  name="cliente_rut"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>RUT</FormLabel>
@@ -355,7 +360,7 @@ function CreateWorkOrderDialog() {
               </div>
               <FormField
                 control={form.control}
-                name="cliente.telefono"
+                name="cliente_telefono"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Teléfono</FormLabel>
@@ -376,7 +381,7 @@ function CreateWorkOrderDialog() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="vehiculo.patente"
+                  name="vehiculo_patente"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Patente</FormLabel>
@@ -389,7 +394,7 @@ function CreateWorkOrderDialog() {
                 />
                 <FormField
                   control={form.control}
-                  name="vehiculo.kilometraje"
+                  name="vehiculo_km"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Kilometraje</FormLabel>
@@ -409,7 +414,7 @@ function CreateWorkOrderDialog() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="vehiculo.marca"
+                  name="vehiculo_marca"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
@@ -422,47 +427,12 @@ function CreateWorkOrderDialog() {
                 />
                 <FormField
                   control={form.control}
-                  name="vehiculo.modelo"
+                  name="vehiculo_modelo"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Modelo</FormLabel>
                       <FormControl>
                         <Input placeholder="Corolla" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Personal */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                Personal Asignado
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="realizado_por"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Mecánico</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Juan Pérez" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="revisado_por"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Supervisor</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Carlos González" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -550,21 +520,6 @@ function CreateWorkOrderDialog() {
                 <span className="text-primary">${calcularTotal().toLocaleString('es-CL')}</span>
               </div>
             </div>
-
-            {/* Firma Cliente */}
-            <FormField
-              control={form.control}
-              name="cliente.nombre"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Firma Cliente Aceptado</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nombre del cliente" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div className="flex justify-end gap-3 pt-4">
               <Button 

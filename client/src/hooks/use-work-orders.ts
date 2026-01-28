@@ -35,28 +35,32 @@ export interface WorkOrderDetail {
 
 export interface CreateWorkOrderDTO {
   numero_orden_papel: number;
-  realizado_por: string;
-  revisado_por?: string;
-  cliente: {
-    nombre: string;
-    rut?: string;
-    email?: string;
-    telefono?: string;
-  };
-  vehiculo: {
-    patente: string;
-    marca: string;
-    modelo: string;
-    kilometraje?: number;
-  };
+  cliente_rut: string;
+  cliente_nombre: string;
+  cliente_telefono?: string;
+  vehiculo_patente: string;
+  vehiculo_marca: string;
+  vehiculo_modelo: string;
+  vehiculo_anio?: number;
+  vehiculo_km?: number;
   items: {
     servicio_nombre: string;
     descripcion?: string;
     precio: number;
     product_sku?: string;
-    cantidad_producto?: number;
+    product_cantidad?: number;
   }[];
 }
+
+const getAuthToken = () => localStorage.getItem("access_token");
+
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
 
 export function useWorkOrders(search?: string) {
   return useQuery<WorkOrder[]>({
@@ -66,7 +70,9 @@ export function useWorkOrders(search?: string) {
         ? `/api/work-orders?search=${encodeURIComponent(search)}`
         : "/api/work-orders";
       
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, { 
+        headers: getAuthHeaders() 
+      });
       if (!res.ok) throw new Error("Error al cargar órdenes de trabajo");
       const data = await res.json();
       
@@ -104,7 +110,7 @@ export function useServicesCatalog() {
     queryKey: ["services-catalog"],
     queryFn: async () => {
       const res = await fetch("/api/work-orders/services-catalog", { 
-        credentials: "include" 
+        headers: getAuthHeaders() 
       });
       if (!res.ok) throw new Error("Error al cargar catálogo de servicios");
       return res.json();
@@ -118,9 +124,8 @@ export function useCreateWorkOrder() {
     mutationFn: async (data: CreateWorkOrderDTO) => {
       const res = await fetch("/api/work-orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(data),
-        credentials: "include",
       });
       if (!res.ok) {
         const error = await res.json();
@@ -142,9 +147,8 @@ export function useUpdateWorkOrder() {
     mutationFn: async ({ id, ...data }: { id: string } & Partial<CreateWorkOrderDTO>) => {
       const res = await fetch(`/api/work-orders/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(data),
-        credentials: "include",
       });
       if (!res.ok) {
         const error = await res.json();
@@ -164,7 +168,7 @@ export function useDeleteWorkOrder() {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/work-orders/${id}`, { 
         method: "DELETE", 
-        credentials: "include" 
+        headers: getAuthHeaders() 
       });
       if (!res.ok) {
         const error = await res.json();
