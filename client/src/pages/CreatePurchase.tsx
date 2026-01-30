@@ -114,7 +114,7 @@ export default function CreatePurchase() {
         calidad: item.calidad?.trim() || undefined,
         cantidad: parseInt(item.cantidad) || 1,
         precio_costo: parseInt(item.precio_costo) || 0,
-        precio_venta_sugerido: parseInt(item.precio_venta) || 0,
+        precio_venta_sugerido: 0,
         modelos_compatibles_ids: undefined,
       })),
     };
@@ -146,7 +146,6 @@ export default function CreatePurchase() {
       form.setValue(`items.${index}.nombre`, product.nombre);
       form.setValue(`items.${index}.marca`, product.marca || "");
       form.setValue(`items.${index}.precio_costo`, Math.round(product.precio_venta / 1.19)); // Sugerimos precio neto basado en venta
-      form.setValue(`items.${index}.precio_venta`, product.precio_venta || 0);
       return;
     }
 
@@ -158,7 +157,6 @@ export default function CreatePurchase() {
       calidad: "",
       cantidad: 1,
       precio_costo: Math.round(product.precio_venta / 1.19),
-      precio_venta: product.precio_venta || 0,
     };
 
     append(newItem);
@@ -183,7 +181,6 @@ export default function CreatePurchase() {
       // Asumimos que si lo acaba de crear, el costo quizás no está definido, o usamos precio venta neto como referencia
       if (newProduct.precio_venta) {
         form.setValue(`items.${index}.precio_costo`, Math.round(newProduct.precio_venta / 1.19));
-        form.setValue(`items.${index}.precio_venta`, newProduct.precio_venta);
       }
 
       toast({
@@ -200,7 +197,6 @@ export default function CreatePurchase() {
         calidad: "",
         cantidad: 1,
         precio_costo: newProduct.precio_venta ? Math.round(newProduct.precio_venta / 1.19) : 0,
-        precio_venta: newProduct.precio_venta || 0,
       };
       append(newItem);
       toast({
