@@ -3,10 +3,15 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createColumns, ClienteDetalle } from "@/components/clients/columns";
-import { Search, Loader2, RefreshCcw, ChevronDown } from "lucide-react";
-import { useClients, useUpdateClient, useDeleteClient } from "@/hooks/use-clients";
+import { Search, Loader2, RefreshCcw, ChevronDown, Plus, UserPlus } from "lucide-react";
+import { useClients, useDeleteClient, useCreateClient } from "@/hooks/use-clients";
 import { useWorkOrders } from "@/hooks/use-work-orders";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,21 +44,28 @@ export default function Clients() {
   
   const [searchValue, setSearchValue] = useState("");
   const [clientToDelete, setClientToDelete] = useState<ClienteDetalle | null>(null);
+  
+  // ESTADO PARA DIALOGO DE CREACIÓN
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  // Estados Tabla
+  // DETECTAR URL ?action=new
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'new') {
+      setIsCreateOpen(true);
+      window.history.replaceState({}, '', '/clients');
+    }
+  }, []);
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
-  // Preparar datos
   const clientsWithStats = useMemo(() => {
     return clients.map(client => {
-      // CORRECCIÓN AQUÍ: Usamos wo.cliente?.id en lugar de wo.cliente_id
       const clientOrders = workOrders.filter(wo => wo.cliente?.id === client.id);
-      
       const totalSpent = clientOrders.reduce((sum, wo) => sum + (wo.total_cobrado || 0), 0);
-      
       const lastOrder = clientOrders.sort((a, b) => 
         new Date(b.fecha_ingreso).getTime() - new Date(a.fecha_ingreso).getTime()
       )[0];
@@ -108,9 +120,17 @@ export default function Clients() {
       <PageHeader
         title="Cartera de Clientes"
         description="Gestión de clientes, historial y fidelización."
+        // BOTÓN NUEVO CLIENTE RESTAURADO
+        action={
+          <>
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" /> Nuevo Cliente
+            </Button>
+            <CreateClientDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+          </>
+        }
       />
 
-      {/* BARRA DE HERRAMIENTAS */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
           <div className="relative w-full lg:w-[350px]">
@@ -156,7 +176,6 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* TABLA */}
       <div className="rounded-md border bg-white">
         <Table>
           <TableHeader>
@@ -196,7 +215,6 @@ export default function Clients() {
         </Table>
       </div>
 
-      {/* PAGINACIÓN */}
       <div className="flex items-center justify-end space-x-2 py-4">
         <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
           Anterior
@@ -226,5 +244,108 @@ export default function Clients() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+// NUEVO COMPONENTE DIALOGO CREAR CLIENTE
+function CreateClientDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { mutate: createClient, isPending } = useCreateClient();
+  const { toast } = useToast();
+
+  const clientSchema = z.object({
+    nombre: z.string().min(3, "El nombre es obligatorio"),
+    rut: z.string().min(8, "RUT inválido"),
+    telefono: z.string().optional(),
+    email: z.string().email("Email inválido").optional().or(z.literal("")),
+  });
+
+  const form = useForm<z.infer<typeof clientSchema>>({
+    resolver: zodResolver(clientSchema),
+    defaultValues: { nombre: "", rut: "", telefono: "+569", email: "" }
+  });
+
+  const onSubmit = (data: z.infer<typeof clientSchema>) => {
+    createClient(data, {
+      onSuccess: () => {
+        toast({ title: "Cliente creado exitosamente" });
+        onOpenChange(false);
+        form.reset();
+      },
+      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" })
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-primary" /> Nuevo Cliente
+          </DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="rut"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>RUT</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="12.345.678-9" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="nombre"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre Completo</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Juan Pérez" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="telefono"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Teléfono</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="email" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar Cliente"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
