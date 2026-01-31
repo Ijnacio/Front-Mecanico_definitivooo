@@ -3,8 +3,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createColumns, ClienteDetalle } from "@/components/clients/columns";
-import { Search, Loader2, RefreshCcw, ChevronDown, Plus, UserPlus } from "lucide-react";
-import { useClients, useDeleteClient, useCreateClient } from "@/hooks/use-clients";
+import { Search, Loader2, RefreshCcw, ChevronDown, Plus, UserPlus, History, Edit } from "lucide-react";
+import { useClients, useCreateClient, useUpdateClient } from "@/hooks/use-clients";
 import { useWorkOrders } from "@/hooks/use-work-orders";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -12,16 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
 import {
   useReactTable,
   getCoreRowModel,
@@ -39,12 +30,14 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 export default function Clients() {
   const { data: clients = [], isLoading } = useClients();
   const { data: workOrders = [] } = useWorkOrders();
-  const deleteClientMutation = useDeleteClient();
   const { toast } = useToast();
-  
+
   const [searchValue, setSearchValue] = useState("");
-  const [clientToDelete, setClientToDelete] = useState<ClienteDetalle | null>(null);
-  
+  const [selectedClient, setSelectedClient] = useState<ClienteDetalle | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [clientToEdit, setClientToEdit] = useState<ClienteDetalle | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
   // ESTADO PARA DIALOGO DE CREACIÓN
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -66,7 +59,7 @@ export default function Clients() {
     return clients.map(client => {
       const clientOrders = workOrders.filter(wo => wo.cliente?.id === client.id);
       const totalSpent = clientOrders.reduce((sum, wo) => sum + (wo.total_cobrado || 0), 0);
-      const lastOrder = clientOrders.sort((a, b) => 
+      const lastOrder = clientOrders.sort((a, b) =>
         new Date(b.fecha_ingreso).getTime() - new Date(a.fecha_ingreso).getTime()
       )[0];
 
@@ -81,19 +74,25 @@ export default function Clients() {
   const filteredClients = useMemo(() => {
     if (!searchValue) return clientsWithStats;
     const lower = searchValue.toLowerCase();
-    return clientsWithStats.filter(c => 
-      c.nombre.toLowerCase().includes(lower) || 
+    return clientsWithStats.filter(c =>
+      c.nombre.toLowerCase().includes(lower) ||
       c.rut.toLowerCase().includes(lower)
     );
   }, [clientsWithStats, searchValue]);
 
   const handleEdit = (client: ClienteDetalle) => {
-    toast({ title: "Editar cliente no implementado aún" });
+    setClientToEdit(client);
+    setIsEditOpen(true);
+  };
+
+  const handleViewHistory = (client: ClienteDetalle) => {
+    setSelectedClient(client);
+    setIsHistoryOpen(true);
   };
 
   const columns = useMemo(() => createColumns(
     handleEdit,
-    (c) => setClientToDelete(c)
+    handleViewHistory
   ), []);
 
   const table = useReactTable({
@@ -224,26 +223,282 @@ export default function Clients() {
         </Button>
       </div>
 
-      <AlertDialog open={!!clientToDelete} onOpenChange={(o) => !o && setClientToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar cliente?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará permanentemente al cliente {clientToDelete?.nombre}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => clientToDelete && deleteClientMutation.mutate(clientToDelete.id)}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ClientHistoryDialog
+        client={selectedClient}
+        workOrders={workOrders.filter(wo => wo.cliente?.id === selectedClient?.id)}
+        open={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
+      />
+
+      <EditClientDialog
+        client={clientToEdit}
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+      />
     </div>
+  );
+}
+
+// COMPONENTE HISTORIAL DE CLIENTE
+function ClientHistoryDialog({
+  client,
+  workOrders,
+  open,
+  onOpenChange
+}: {
+  client: ClienteDetalle | null;
+  workOrders: any[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!client) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <History className="w-5 h-5 text-primary" />
+            Historial de Atenciones - {client.nombre}
+          </DialogTitle>
+          <div className="flex items-center gap-4 text-sm text-slate-600 mt-1">
+            <span className="font-mono">{client.rut}</span>
+            {client.telefono && <span>📞 {client.telefono}</span>}
+          </div>
+        </DialogHeader>
+
+        {/* Lista de Órdenes */}
+        <div className="space-y-3 mt-4">
+          {workOrders.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <p>Este cliente no tiene órdenes de trabajo registradas</p>
+            </div>
+          ) : (
+            workOrders
+              .sort((a, b) => new Date(b.fecha_ingreso).getTime() - new Date(a.fecha_ingreso).getTime())
+              .map((wo) => (
+                <div key={wo.id} className="border border-slate-200 rounded-lg p-4 bg-white hover:border-slate-300 transition-colors">
+                  {/* Header de la OT */}
+                  <div className="flex justify-between items-start mb-3 pb-3 border-b border-slate-100">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-base text-slate-900">OT #{wo.numero_orden_papel}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${wo.estado === 'FINALIZADA' ? 'bg-emerald-100 text-emerald-700' :
+                          wo.estado === 'EN_PROCESO' ? 'bg-blue-100 text-blue-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                          {wo.estado}
+                        </span>
+                      </div>
+                      <div className="text-sm text-slate-600 mt-1">
+                        {new Date(wo.fecha_ingreso).toLocaleDateString('es-CL', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-emerald-600">
+                        ${wo.total_cobrado?.toLocaleString('es-CL') || 0}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Información del Vehículo */}
+                  {wo.vehiculo && (
+                    <div className="bg-blue-50 rounded-md p-3 mb-3 border border-blue-100">
+                      <div className="font-medium text-slate-900">
+                        🚗 {wo.vehiculo.marca} {wo.vehiculo.modelo} - <span className="font-mono font-bold">{wo.vehiculo.patente}</span>
+                      </div>
+                      {wo.kilometraje && (
+                        <div className="text-sm text-slate-600 mt-1">
+                          📏 {wo.kilometraje.toLocaleString('es-CL')} km
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Detalles de Servicios - ENFOQUE PRINCIPAL */}
+                  {wo.detalles && wo.detalles.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Trabajos Realizados</div>
+                      {wo.detalles.map((detalle: any, idx: number) => (
+                        <div key={detalle.id || idx} className="bg-slate-50 rounded-md p-3 border border-slate-200">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="font-semibold text-slate-900">{detalle.servicio_nombre}</div>
+                            <div className="font-bold text-slate-900 ml-4">
+                              ${detalle.precio?.toLocaleString('es-CL') || 0}
+                            </div>
+                          </div>
+
+                          {detalle.descripcion && (
+                            <div className="text-sm text-slate-700 bg-white rounded p-2 border border-slate-200 mt-2">
+                              <span className="font-medium text-slate-500">Descripción:</span> {detalle.descripcion}
+                            </div>
+                          )}
+
+                          {detalle.producto && (
+                            <div className="text-xs text-blue-700 mt-2 bg-blue-50 rounded px-2 py-1 inline-block">
+                              📦 Producto: {detalle.producto.nombre} (SKU: {detalle.producto.sku})
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Mecánico */}
+                  <div className="mt-3 pt-3 border-t border-slate-200 text-xs text-slate-600">
+                    <span className="font-medium">👨‍🔧 {wo.realizado_por || 'No especificado'}</span>
+                    {wo.revisado_por && (
+                      <span className="ml-4">✅ Revisado: {wo.revisado_por}</span>
+                    )}
+                  </div>
+                </div>
+              ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// COMPONENTE EDITAR CLIENTE
+function EditClientDialog({
+  client,
+  open,
+  onOpenChange
+}: {
+  client: ClienteDetalle | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void
+}) {
+  const { mutate: updateClient, isPending } = useUpdateClient();
+  const { toast } = useToast();
+
+  const clientSchema = z.object({
+    nombre: z.string().min(3, "El nombre es obligatorio"),
+    rut: z.string().min(8, "RUT inválido"),
+    telefono: z.string().optional(),
+    email: z.string().email("Email inválido").optional().or(z.literal("")),
+  });
+
+  const form = useForm<z.infer<typeof clientSchema>>({
+    resolver: zodResolver(clientSchema),
+    defaultValues: {
+      nombre: client?.nombre || "",
+      rut: client?.rut || "",
+      telefono: client?.telefono || "+56 9",
+      email: client?.email || ""
+    }
+  });
+
+  // Actualizar valores del formulario cuando cambia el cliente
+  useEffect(() => {
+    if (client) {
+      form.reset({
+        nombre: client.nombre,
+        rut: client.rut,
+        telefono: client.telefono || "+56 9",
+        email: client.email || ""
+      });
+    }
+  }, [client, form]);
+
+  const onSubmit = (data: z.infer<typeof clientSchema>) => {
+    if (!client) return;
+
+    updateClient(
+      { id: client.id, data },
+      {
+        onSuccess: () => {
+          toast({ title: "✅ Cliente actualizado exitosamente" });
+          onOpenChange(false);
+        },
+        onError: (err: any) => toast({
+          title: "Error al actualizar",
+          description: err.message,
+          variant: "destructive"
+        })
+      }
+    );
+  };
+
+  if (!client) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Edit className="w-5 h-5 text-primary" /> Editar Cliente
+          </DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="rut"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>RUT</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="12.345.678-9" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="nombre"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre Completo</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Juan Pérez" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="telefono"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Teléfono</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="email" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar Cambios"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -261,7 +516,7 @@ function CreateClientDialog({ open, onOpenChange }: { open: boolean; onOpenChang
 
   const form = useForm<z.infer<typeof clientSchema>>({
     resolver: zodResolver(clientSchema),
-    defaultValues: { nombre: "", rut: "", telefono: "+569", email: "" }
+    defaultValues: { nombre: "", rut: "", telefono: "+56 9", email: "" }
   });
 
   const onSubmit = (data: z.infer<typeof clientSchema>) => {

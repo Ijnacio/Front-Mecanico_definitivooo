@@ -41,7 +41,7 @@ const productSchema = z.object({
   precio_venta: z.coerce.number().min(1, "El precio debe ser mayor a 0"),
   stock_actual: z.coerce.number().min(0, "El stock no puede ser negativo"),
   stock_minimo: z.coerce.number().min(1, "El stock mínimo debe ser al menos 1"),
-  categoria_id: z.string().min(1, "Debes seleccionar una categoría"),
+  categoriaId: z.string().min(1, "Debes seleccionar una categoría"),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -70,16 +70,28 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
       precio_venta: 0,
       stock_actual: 0,
       stock_minimo: 5,
-      categoria_id: "",
+      categoriaId: "",
     },
   });
 
   const onSubmit = (data: ProductFormValues) => {
+    const payload: any = { // Using 'any' for CreateProductDTO to avoid import issues, assuming it's defined elsewhere
+      sku: data.sku.toUpperCase().trim(),
+      nombre: data.nombre.toUpperCase().trim(),
+      marca: data.marca?.toUpperCase().trim() || undefined,
+      calidad: data.calidad || undefined,
+      precio_venta: data.precio_venta,
+      stock_actual: data.stock_actual,
+      stock_minimo: data.stock_minimo,
+      categoriaId: data.categoriaId,
+      modelosCompatiblesIds: selectedModels.map((m) => m.id),
+    };
+
+    console.log('📦 Payload a enviar:', payload);
+    console.log('🚗 Modelos seleccionados:', selectedModels);
+
     createProduct(
-      {
-        ...data,
-        modelosCompatiblesIds: selectedModels.map((m) => m.id),
-      },
+      payload,
       {
         onSuccess: (newProduct) => {
           toast({
@@ -91,7 +103,7 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
           setNetPriceDisplay("");
           setSelectedModels([]);
           onOpenChange(false);
-          
+
           // LLAMADA AL CALLBACK SI EXISTE
           if (onProductCreated) {
             onProductCreated(newProduct);
@@ -171,7 +183,7 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
                   <FormItem>
                     <FormLabel className="text-xs font-bold uppercase text-slate-500">Marca</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Ej: Bosch, Brembo..." />
+                      <Input {...field} placeholder="Ej: Bosch, Brembo..." className="uppercase" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -186,7 +198,7 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
                 <FormItem>
                   <FormLabel className="text-xs font-bold uppercase text-slate-500">Nombre del Producto</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Ej: Pastillas de Freno Delanteras" className="text-lg font-medium" />
+                    <Input {...field} placeholder="Ej: Pastillas de Freno Delanteras" className="uppercase text-lg font-medium" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -196,7 +208,7 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="categoria_id"
+                name="categoriaId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold uppercase text-slate-500">Categoría</FormLabel>
@@ -292,7 +304,7 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-bold uppercase text-slate-500">Stock Inicial</FormLabel>
-                      <FormControl><Input {...field} type="number" min="0" className="bg-white" /></FormControl>
+                      <FormControl><Input {...field} type="number" min="0" className="bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -304,7 +316,7 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-bold uppercase text-slate-500">Stock Mínimo</FormLabel>
-                      <FormControl><Input {...field} type="number" min="1" className="bg-white" /></FormControl>
+                      <FormControl><Input {...field} type="number" min="1" className="bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

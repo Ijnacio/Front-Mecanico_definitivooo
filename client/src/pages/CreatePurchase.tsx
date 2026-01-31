@@ -756,7 +756,7 @@ function CreateProviderModal({
   const form = useForm({
     defaultValues: {
       nombre: "",
-      telefono: "+569",
+      telefono: "+56 9",
       email: "",
     },
   });
@@ -824,8 +824,8 @@ function CreateProviderModal({
                       placeholder="Ej: +56912345678"
                       className="h-11 bg-slate-50 border-slate-200 focus:bg-white font-mono"
                       onFocus={(e) => {
-                        if (e.target.value === '' || e.target.value === '+569') {
-                          field.onChange('+569');
+                        if (e.target.value === '' || e.target.value === '+56 9') {
+                          field.onChange('+56 9');
                         }
                       }}
                     />

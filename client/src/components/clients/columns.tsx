@@ -1,6 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Edit, Trash2, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, Edit, ArrowUpDown, History } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -22,7 +22,7 @@ export type ClienteDetalle = {
 
 export const createColumns = (
     onEdit: (client: ClienteDetalle) => void,
-    onDelete: (client: ClienteDetalle) => void
+    onViewHistory: (client: ClienteDetalle) => void
 ): ColumnDef<ClienteDetalle>[] => [
         {
             accessorKey: "nombre",
@@ -93,15 +93,12 @@ export const createColumns = (
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => onEdit(client)}>
-                                <Edit className="mr-2 h-4 w-4" /> Editar
+                            <DropdownMenuItem onClick={() => onViewHistory(client)}>
+                                <History className="mr-2 h-4 w-4" /> Ver Historial
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onClick={() => onDelete(client)}
-                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                            <DropdownMenuItem onClick={() => onEdit(client)}>
+                                <Edit className="mr-2 h-4 w-4" /> Editar
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

@@ -1,7 +1,7 @@
 import { Purchase } from "@/hooks/use-purchases";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Eye, Trash2, ShoppingCart, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, Eye, ShoppingCart, ArrowUpDown } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -20,8 +20,7 @@ export type PurchaseWithTotals = Purchase & {
 };
 
 export const createColumns = (
-    onView: (purchase: PurchaseWithTotals) => void,
-    onDelete: (purchase: PurchaseWithTotals) => void
+    onView: (purchase: PurchaseWithTotals) => void
 ): ColumnDef<PurchaseWithTotals>[] => [
         {
             accessorKey: "proveedor.nombre",
@@ -115,14 +114,6 @@ export const createColumns = (
                             <DropdownMenuItem onClick={() => onView(purchase)}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 Ver Detalle
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onClick={() => onDelete(purchase)}
-                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

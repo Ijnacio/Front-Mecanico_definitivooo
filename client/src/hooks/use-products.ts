@@ -10,6 +10,7 @@ export interface Product {
   precio_venta: number;
   stock_actual: number;
   stock_minimo: number;
+  created_at?: string;
   categoria: {
     id: string;
     nombre: string;
@@ -36,7 +37,7 @@ export interface CreateProductDTO {
   precio_venta: number;
   stock_actual?: number;
   stock_minimo?: number;
-  categoria_id?: string;
+  categoriaId?: string;
   modelosCompatiblesIds?: string[];
 }
 
@@ -54,6 +55,8 @@ export function useProducts(search?: string) {
       if (!res.ok) throw new Error("Error al cargar productos");
       const data = await res.json();
 
+
+
       return data;
     },
   });
@@ -63,6 +66,7 @@ export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateProductDTO) => {
+
       const res = await fetch(getApiUrl("/products"), {
         method: "POST",
         headers: getAuthHeaders(),
@@ -70,9 +74,22 @@ export function useCreateProduct() {
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Error al crear producto");
+        let errorMessage = error.message || "Error al crear producto";
+
+        // Mejorar mensajes de error específicos
+        if (res.status === 409) {
+          errorMessage = "Ya existe un producto con ese SKU o un modelo de vehículo duplicado. Por favor, verifica los datos.";
+        } else if (res.status === 400) {
+          if (Array.isArray(error.message)) {
+            errorMessage = error.message.join(", ");
+          }
+        }
+
+        throw new Error(errorMessage);
       }
-      return res.json();
+      const createdProduct = await res.json();
+
+      return createdProduct;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -111,10 +128,31 @@ export function useDeleteProduct() {
         headers: getAuthHeaders(),
       });
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Error al eliminar producto");
+        // Intentar parsear el error solo si hay contenido
+        let errorMessage = "Error al eliminar producto";
+
+        try {
+          const error = await res.json();
+          errorMessage = error.message || errorMessage;
+        } catch {
+          // Si no hay JSON, usar mensaje por defecto
+        }
+
+        // Mejorar mensajes para errores de restricción de integridad
+        if (res.status === 500 || res.status === 409) {
+          errorMessage = "No se puede eliminar este producto porque está siendo usado en órdenes de trabajo, compras o ventas. Considera reducir el stock a 0 en su lugar.";
+        }
+
+        throw new Error(errorMessage);
       }
-      return res.json();
+
+      // El DELETE puede devolver 204 No Content (sin body)
+      // Solo intentar parsear JSON si hay contenido
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return res.json();
+      }
+      return null;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });

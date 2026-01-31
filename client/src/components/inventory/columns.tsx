@@ -118,6 +118,8 @@ export const createColumns = (
             header: "Compatibilidad",
             cell: ({ row }) => {
                 const compat = row.original.modelosCompatibles || row.original.compatibilidades || [];
+                console.log(`🚗 Compatibilidad para ${row.original.sku}:`, compat);
+
                 if (compat.length === 0) {
                     return <span className="text-slate-400 text-xs italic flex items-center gap-1"><Car className="w-3 h-3" /> Universal / N/A</span>
                 }
