@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Plus, DollarSign, Package } from "lucide-react";
 
+// El esquema Zod usa 'categoria_id' para el formulario interno
 const productSchema = z.object({
   sku: z.string().min(1, "El SKU es obligatorio"),
   nombre: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
@@ -46,11 +47,10 @@ const productSchema = z.object({
 
 type ProductFormValues = z.infer<typeof productSchema>;
 
-// INTERFACE ACTUALIZADA CON onProductCreated
 interface AddProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onProductCreated?: (product: any) => void; // <--- NUEVA PROP
+  onProductCreated?: (product: any) => void;
 }
 
 export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddProductDialogProps) {
@@ -75,37 +75,46 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
   });
 
   const onSubmit = (data: ProductFormValues) => {
-    createProduct(
-      {
-        ...data,
-        modelosCompatiblesIds: selectedModels.map((m) => m.id),
+    // 🛠️ CORRECCIÓN CLAVE AQUÍ:
+    // Transformamos 'categoria_id' (del form) a 'categoriaId' (para el backend)
+    const payload = {
+      sku: data.sku,
+      nombre: data.nombre,
+      marca: data.marca,
+      calidad: data.calidad,
+      precio_venta: data.precio_venta,
+      stock_actual: data.stock_actual,
+      stock_minimo: data.stock_minimo,
+      categoriaId: data.categoria_id, // <--- CAMBIO IMPORTANTE
+      modelosCompatiblesIds: selectedModels.map((m) => m.id),
+    };
+
+    createProduct(payload, {
+      onSuccess: (newProduct) => {
+        toast({
+          title: "Producto creado",
+          description: `Se ha creado el producto ${data.nombre} exitosamente.`,
+          className: "bg-emerald-50 text-emerald-900 border-emerald-200",
+        });
+        form.reset();
+        setNetPriceDisplay("");
+        setSelectedModels([]);
+        onOpenChange(false);
+        
+        if (onProductCreated) {
+          onProductCreated(newProduct);
+        }
       },
-      {
-        onSuccess: (newProduct) => {
-          toast({
-            title: "Producto creado",
-            description: `Se ha creado el producto ${data.nombre} exitosamente.`,
-            className: "bg-emerald-50 text-emerald-900 border-emerald-200",
-          });
-          form.reset();
-          setNetPriceDisplay("");
-          setSelectedModels([]);
-          onOpenChange(false);
-          
-          // LLAMADA AL CALLBACK SI EXISTE
-          if (onProductCreated) {
-            onProductCreated(newProduct);
-          }
-        },
-        onError: (error: any) => {
-          toast({
-            title: "Error al crear",
-            description: error.message || "Ocurrió un error inesperado.",
-            variant: "destructive",
-          });
-        },
-      }
-    );
+      onError: (error: any) => {
+        // Mostramos el mensaje detallado del backend si existe
+        const msg = error.response?.data?.message || error.message || "Ocurrió un error inesperado.";
+        toast({
+          title: "Error al crear",
+          description: Array.isArray(msg) ? msg.join(", ") : msg,
+          variant: "destructive",
+        });
+      },
+    });
   };
 
   const handleNetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
