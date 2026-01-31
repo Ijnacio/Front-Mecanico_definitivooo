@@ -1,9 +1,9 @@
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Loader2, ShoppingCart, Trash2, MoreHorizontal, Eye, Filter, RefreshCcw, ChevronDown } from "lucide-react";
+import { Plus, Search, Loader2, ShoppingCart, MoreHorizontal, Eye, Filter, RefreshCcw, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usePurchases, useDeletePurchase, Purchase } from "@/hooks/use-purchases";
+import { usePurchases, Purchase } from "@/hooks/use-purchases";
 import { useProviders } from "@/hooks/use-providers";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo, useEffect } from "react";
@@ -29,7 +29,6 @@ export default function Purchases() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { data: allPurchases = [], isLoading } = usePurchases();
-  const { mutate: deletePurchaseMutation } = useDeletePurchase();
   const { toast } = useToast();
   const { data: providers = [] } = useProviders();
 
@@ -81,18 +80,10 @@ export default function Purchases() {
     });
   }, [purchasesWithTotals, searchValue, supplierFilter]);
 
-  const handleDelete = (purchase: PurchaseWithTotals) => {
-    if (confirm("¿Estás seguro de eliminar esta compra? Se revertirá el stock de los productos.")) {
-      deletePurchaseMutation(purchase.id, {
-        onSuccess: () => toast({ title: "Compra eliminada y stock revertido" }),
-        onError: (err) => toast({ title: "Error al eliminar", description: err.message, variant: "destructive" })
-      });
-    }
-  };
+
 
   const columns = useMemo(() => createColumns(
-    (p) => setSelectedPurchase(p),
-    (p) => handleDelete(p)
+    (p) => setSelectedPurchase(p)
   ), []);
 
   const table = useReactTable({
@@ -129,7 +120,7 @@ export default function Purchases() {
       {/* BARRA DE HERRAMIENTAS */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
-          
+
           {/* Buscador */}
           <div className="relative w-full lg:w-[350px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -142,7 +133,7 @@ export default function Purchases() {
           </div>
 
           <div className="flex flex-1 flex-col md:flex-row gap-3 w-full lg:w-auto items-center flex-wrap lg:justify-end">
-            
+
             {/* Filtro Proveedor */}
             <Select value={supplierFilter} onValueChange={setSupplierFilter}>
               <SelectTrigger className="h-10 w-full md:w-[200px] bg-slate-50 border-dashed">
@@ -213,9 +204,9 @@ export default function Purchases() {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
@@ -224,11 +215,11 @@ export default function Purchases() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-               <TableRow>
-                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                   <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
-                 </TableCell>
-               </TableRow>
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
+                </TableCell>
+              </TableRow>
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow

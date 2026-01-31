@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Plus, DollarSign, Package } from "lucide-react";
 
-// El esquema Zod usa 'categoria_id' para el formulario interno
+// El esquema Zod usa 'categoria_id' para el formulario interno (UI)
 const productSchema = z.object({
   sku: z.string().min(1, "El SKU es obligatorio"),
   nombre: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
@@ -75,17 +75,16 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
   });
 
   const onSubmit = (data: ProductFormValues) => {
-    // 🛠️ CORRECCIÓN CLAVE AQUÍ:
-    // Transformamos 'categoria_id' (del form) a 'categoriaId' (para el backend)
+    // Fusionamos: Limpieza de strings + Corrección de categoriaId + Mejores Errores
     const payload = {
-      sku: data.sku,
-      nombre: data.nombre,
-      marca: data.marca,
-      calidad: data.calidad,
+      sku: data.sku.toUpperCase().trim(),
+      nombre: data.nombre.toUpperCase().trim(),
+      marca: data.marca?.toUpperCase().trim() || undefined,
+      calidad: data.calidad || undefined,
       precio_venta: data.precio_venta,
       stock_actual: data.stock_actual,
       stock_minimo: data.stock_minimo,
-      categoriaId: data.categoria_id, // <--- CAMBIO IMPORTANTE
+      categoriaId: data.categoria_id, // Mapeo de categoria_id (form) a categoriaId (backend)
       modelosCompatiblesIds: selectedModels.map((m) => m.id),
     };
 
@@ -93,7 +92,7 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
       onSuccess: (newProduct) => {
         toast({
           title: "Producto creado",
-          description: `Se ha creado el producto ${data.nombre} exitosamente.`,
+          description: `Se ha creado el producto ${payload.nombre} exitosamente.`,
           className: "bg-emerald-50 text-emerald-900 border-emerald-200",
         });
         form.reset();
@@ -106,7 +105,6 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
         }
       },
       onError: (error: any) => {
-        // Mostramos el mensaje detallado del backend si existe
         const msg = error.response?.data?.message || error.message || "Ocurrió un error inesperado.";
         toast({
           title: "Error al crear",
@@ -209,7 +207,7 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold uppercase text-slate-500">Categoría</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar..." />

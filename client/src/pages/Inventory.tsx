@@ -5,7 +5,7 @@ import { useProducts, useDeleteProduct, useUpdateProduct } from "@/hooks/use-pro
 import { useCategories } from "@/hooks/use-categories";
 import { useAuth } from "@/hooks/use-auth";
 import { AddProductDialog } from "@/components/products/AddProductDialog";
-import { DataTable } from "@/components/ui/data-table"; 
+import { DataTable } from "@/components/ui/data-table";
 import { createColumns } from "@/components/inventory/columns";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { VehicleModelMultiSelect } from "@/components/VehicleModelMultiSelect";
-import { Loader2, DollarSign, Filter, RefreshCcw, Search, Plus } from "lucide-react";
+import { Loader2, DollarSign, Filter, RefreshCcw, Search, Plus, SlidersHorizontal } from "lucide-react";
 import type { VehicleModel } from "@/hooks/use-vehicle-models";
 
 export default function Inventory() {
@@ -26,7 +26,7 @@ export default function Inventory() {
 
   // Filter State
   const [searchValue, setSearchValue] = useState("");
-  const [stockFilter, setStockFilter] = useState("all"); 
+  const [stockFilter, setStockFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
   // Estado para controlar modal
@@ -42,7 +42,7 @@ export default function Inventory() {
 
   // Filter Logic
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
+    const filtered = products.filter(product => {
       if (stockFilter === "low" && product.stock_actual > product.stock_minimo) return false;
       if (stockFilter === "out" && product.stock_actual > 0) return false;
       if (categoryFilter !== "all" && product.categoria?.nombre !== categoryFilter) return false;
@@ -63,6 +63,13 @@ export default function Inventory() {
       }
       return true;
     });
+
+    // Ordenar por fecha de creación (más recientes primero)
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA; // Descendente
+    });
   }, [products, stockFilter, categoryFilter, searchValue]);
 
   const deleteMutation = useDeleteProduct();
@@ -75,10 +82,19 @@ export default function Inventory() {
   };
 
   const handleDelete = (product: any) => {
-    if (confirm(`¿Estás seguro de eliminar el producto ${product.sku}?`)) {
+    const confirmMessage = `¿Estás seguro de eliminar el producto ${product.sku}?\n\nNota: Si este producto está siendo usado en órdenes de trabajo, compras o ventas, no podrá ser eliminado.`;
+    if (confirm(confirmMessage)) {
       deleteMutation.mutate(product.id, {
-        onSuccess: () => toast({ title: "Producto eliminado" }),
-        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" })
+        onSuccess: () => toast({
+          title: "Producto eliminado",
+          description: "El producto ha sido eliminado exitosamente.",
+          className: "bg-emerald-50 text-emerald-900 border-emerald-200"
+        }),
+        onError: (err: any) => toast({
+          title: "Error al eliminar",
+          description: err.message,
+          variant: "destructive"
+        })
       });
     }
   };
@@ -160,6 +176,12 @@ export default function Inventory() {
                 <RefreshCcw className="w-3.5 h-3.5" />
               </Button>
             )}
+
+            {/* Botón Columnas movido aquí */}
+            <Button variant="outline" size="sm" className="h-10 border-dashed">
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Columnas
+            </Button>
           </div>
         </div>
       </div>
@@ -195,7 +217,7 @@ function EditProductDialog({ product, open, onOpenChange, categories }: { produc
       precio_venta: product.precio_venta,
       stock_actual: product.stock_actual,
       stock_minimo: product.stock_minimo,
-      categoria_id: product.categoria?.id || "",
+      categoriaId: product.categoria?.id || "",
     },
   });
 
@@ -208,14 +230,18 @@ function EditProductDialog({ product, open, onOpenChange, categories }: { produc
       precio_venta: data.precio_venta,
       stock_actual: data.stock_actual,
       stock_minimo: data.stock_minimo,
-      categoriaId: data.categoria_id,
+      categoriaId: data.categoriaId,
       modelosCompatiblesIds: selectedModels.map(m => m.id),
     };
 
     updateMutation.mutate({ id: product.id, ...payload }, {
       onSuccess: () => {
         onOpenChange(false);
-        toast({ title: "Producto actualizado" });
+        toast({
+          title: "Producto actualizado",
+          description: "Los cambios han sido guardados exitosamente.",
+          className: "bg-emerald-50 text-emerald-900 border-emerald-200"
+        });
       },
       onError: (error: any) => {
         toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -238,8 +264,8 @@ function EditProductDialog({ product, open, onOpenChange, categories }: { produc
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-             {/* CAMPOS (Misma estructura que AddProductDialog pero sin la lógica doble vía que añadimos antes, solo básica) */}
-             <div className="grid grid-cols-2 gap-4">
+            {/* CAMPOS (Misma estructura que AddProductDialog pero sin la lógica doble vía que añadimos antes, solo básica) */}
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="sku"
@@ -275,30 +301,30 @@ function EditProductDialog({ product, open, onOpenChange, categories }: { produc
               )}
             />
             {/* ... Resto de campos de precio y stock ... */}
-             <div className="grid grid-cols-2 gap-5">
-                <FormField
-                  control={form.control}
-                  name="precio_venta"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Precio Venta</FormLabel>
-                      <FormControl><Input {...field} type="number" onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="stock_actual"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Stock Actual</FormLabel>
-                      <FormControl><Input {...field} type="number" onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-             </div>
+            <div className="grid grid-cols-2 gap-5">
+              <FormField
+                control={form.control}
+                name="precio_venta"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Precio Venta</FormLabel>
+                    <FormControl><Input {...field} type="number" onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="stock_actual"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stock Actual</FormLabel>
+                    <FormControl><Input {...field} type="number" onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
