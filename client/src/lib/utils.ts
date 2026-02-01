@@ -48,3 +48,29 @@ export function formatPhoneCL(phone?: string | null): string {
   // Si no cumple ningún patrón, retornar el valor original
   return phone;
 }
+
+/**
+ * Formatea un RUT chileno para mostrar con puntos y guión
+ * @param rut - RUT en formato "123456789", "12345678-9", "12.345.678-9", etc.
+ * @returns RUT formateado como "12.345.678-9"
+ */
+export function formatRutCL(rut?: string | null): string {
+  if (!rut) return "";
+  
+  // Limpiar todo excepto números y K
+  const cleaned = rut.replace(/[^0-9kK]/g, "").toUpperCase();
+  if (!cleaned) return "";
+  
+  // Separar cuerpo y dígito verificador
+  const body = cleaned.slice(0, -1);
+  const dv = cleaned.slice(-1);
+  
+  if (!body) return cleaned;
+  
+  // Formatear cuerpo con puntos (de derecha a izquierda)
+  const reversedBody = body.split("").reverse().join("");
+  const formatted = reversedBody.match(/.{1,3}/g)?.join(".") || "";
+  const finalBody = formatted.split("").reverse().join("");
+  
+  return `${finalBody}-${dv}`;
+}

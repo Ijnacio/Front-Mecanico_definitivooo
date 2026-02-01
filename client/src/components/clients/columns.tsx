@@ -2,7 +2,7 @@ import { Client } from "@/hooks/use-clients";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Eye, Edit, ArrowUpDown } from "lucide-react";
-import { formatPhoneCL } from "@/lib/utils";
+import { formatPhoneCL, formatRutCL } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,7 +44,11 @@ export const createColumns = (
   {
     accessorKey: "rut",
     header: "RUT",
-    cell: ({ row }) => <div className="text-slate-700">{row.original.rut}</div>,
+    cell: ({ row }) => (
+      <div className="text-slate-700 font-mono">
+        {formatRutCL(row.original.rut)}
+      </div>
+    ),
   },
   {
     accessorKey: "telefono",

@@ -195,7 +195,6 @@ export function useCreateWorkOrder() {
       }
 
       const responseData = await res.json();
-      console.log("✅ Orden creada exitosamente:", responseData);
       return responseData;
     },
     onSuccess: () => {

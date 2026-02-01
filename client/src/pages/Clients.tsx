@@ -3,16 +3,20 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createColumns, ClienteDetalle } from "@/components/clients/columns";
-import { Search, Loader2, RefreshCcw, ChevronDown, Plus, UserPlus, History, Edit } from "lucide-react";
+import { Search, Loader2, RefreshCcw, ChevronDown, Plus, UserPlus, History, Edit, User, Car, Mail, Phone, Wrench, Calendar, Pencil } from "lucide-react";
 import { useClients, useCreateClient, useUpdateClient } from "@/hooks/use-clients";
-import { useWorkOrders } from "@/hooks/use-work-orders";
+import { useWorkOrders, useUpdateWorkOrder } from "@/hooks/use-work-orders";
+import { useVehicles } from "@/hooks/use-vehicles";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { formatPhoneCL } from "@/lib/utils";
+import { formatPhoneCL, formatRutCL } from "@/lib/utils";
 
 import {
   useReactTable,
@@ -31,9 +35,27 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 export default function Clients() {
   const { data: clients = [], isLoading } = useClients();
   const { data: workOrders = [] } = useWorkOrders();
+  const { data: vehicles = [] } = useVehicles();
   const { toast } = useToast();
 
   const [searchValue, setSearchValue] = useState("");
+
+  // Enriquecer workOrders con datos del catálogo de vehículos (igual que WorkOrders.tsx)
+  const ordersWithVehicleRef = useMemo(() => {
+    return workOrders.map((wo: any) => {
+      const patente = wo.patente_vehiculo || wo.vehicle?.patente || wo.vehiculo?.patente;
+      const vehicleFromCatalog = vehicles.find((v: any) => v.patente === patente);
+      return {
+        ...wo,
+        vehiculo: {
+          marca: vehicleFromCatalog?.marca || wo.vehiculo?.marca || "Sin Marca",
+          modelo: vehicleFromCatalog?.modelo || wo.vehiculo?.modelo || "Sin Modelo",
+          patente: patente || "S/P",
+          kilometraje: vehicleFromCatalog?.kilometraje || wo.vehiculo?.kilometraje || wo.kilometraje || 0
+        }
+      };
+    });
+  }, [workOrders, vehicles]);
   const [selectedClient, setSelectedClient] = useState<ClienteDetalle | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState<ClienteDetalle | null>(null);
@@ -244,7 +266,7 @@ export default function Clients() {
 
       <ClientHistoryDialog
         client={selectedClient}
-        workOrders={workOrders.filter(wo => wo.cliente?.id === selectedClient?.id)}
+        workOrders={ordersWithVehicleRef.filter(wo => wo.cliente?.id === selectedClient?.id)}
         open={isHistoryOpen}
         onOpenChange={setIsHistoryOpen}
       />
@@ -270,6 +292,48 @@ function ClientHistoryDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const [editingVehicle, setEditingVehicle] = useState<{ orderId: string; patente: string; marca: string; modelo: string; kilometraje: number | null } | null>(null);
+  const [formMarca, setFormMarca] = useState("");
+  const [formModelo, setFormModelo] = useState("");
+  const { mutate: updateWorkOrder } = useUpdateWorkOrder();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const handleEditVehicle = (wo: any) => {
+    // Los datos ya vienen enriquecidos desde ordersWithVehicleRef
+    const patente = wo.vehiculo?.patente || wo.patente_vehiculo || "";
+    const marca = wo.vehiculo?.marca || "";
+    const modelo = wo.vehiculo?.modelo || "";
+    const kilometraje = wo.vehiculo?.kilometraje || null;
+    
+    setEditingVehicle({ orderId: wo.id, patente, marca, modelo, kilometraje });
+    setFormMarca(marca || "");
+    setFormModelo(modelo || "");
+  };
+
+  const handleSaveVehicle = () => {
+    if (!editingVehicle) return;
+    
+    updateWorkOrder({
+      id: editingVehicle.orderId,
+      vehiculo: {
+        patente: editingVehicle.patente,
+        marca: formMarca.trim().toUpperCase(),
+        modelo: formModelo.trim().toUpperCase(),
+        kilometraje: editingVehicle.kilometraje || undefined
+      }
+    }, {
+      onSuccess: () => {
+        toast({ title: "✅ Vehículo actualizado", className: "bg-emerald-50 text-emerald-900 border-emerald-200" });
+        setEditingVehicle(null);
+        queryClient.invalidateQueries({ queryKey: ["work-orders"] });
+      },
+      onError: (err: any) => {
+        toast({ title: "❌ Error al actualizar", description: err.message, variant: "destructive" });
+      }
+    });
+  };
+
   if (!client) return null;
 
   return (
@@ -282,26 +346,36 @@ function ClientHistoryDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* 1. CARD CLIENTE - Compacta y clara */}
-        <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Cliente</div>
-          <div className="text-2xl font-bold text-slate-900 mb-1">{client.nombre}</div>
-          <div className="text-sm text-slate-500 flex items-center gap-2">
-            <span>{client.rut}</span>
+        {/* CARD CLIENTE */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <User className="w-4 h-4" /> Cliente
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5 text-sm">
+            <div className="flex gap-2">
+              <span className="text-slate-500 min-w-[70px]">Nombre:</span>
+              <span className="font-semibold text-slate-900">{client.nombre}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="text-slate-500 min-w-[70px]">RUT:</span>
+              <span className="font-medium text-slate-800 font-mono">{formatRutCL(client.rut)}</span>
+            </div>
             {client.telefono && (
-              <>
-                <span className="text-slate-400">·</span>
-                <span className="font-mono">{formatPhoneCL(client.telefono)}</span>
-              </>
+              <div className="flex gap-2">
+                <span className="text-slate-500 min-w-[70px]">Teléfono:</span>
+                <span className="font-medium text-slate-800 font-mono">{formatPhoneCL(client.telefono)}</span>
+              </div>
             )}
             {client.email && (
-              <>
-                <span className="text-slate-400">·</span>
-                <span>{client.email}</span>
-              </>
+              <div className="flex gap-2">
+                <span className="text-slate-500 min-w-[70px]">Email:</span>
+                <span className="font-medium text-slate-800">{client.email}</span>
+              </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* 2. LISTA DE ÓRDENES DE TRABAJO - Cada una como card principal */}
         <div className="space-y-4 mt-4">
@@ -313,10 +387,8 @@ function ClientHistoryDialog({
             workOrders
               .sort((a, b) => new Date(b.fecha_ingreso).getTime() - new Date(a.fecha_ingreso).getTime())
               .map((wo) => (
-                <div key={wo.id} className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                  
-                  {/* HEADER DE LA CARD OT */}
-                  <div className="flex items-start justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+                <Card key={wo.id}>
+                  <div className="flex items-start justify-between px-6 py-3 bg-slate-50 border-b border-slate-200">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-base font-bold text-slate-900">OT #{wo.numero_orden_papel}</span>
                       <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
@@ -339,86 +411,175 @@ function ClientHistoryDialog({
                     </div>
                   </div>
 
-                  {/* CONTENIDO DE LA CARD OT */}
-                  <div className="p-4 space-y-4">
+                  <CardContent className="space-y-4 pt-6">
                     
-                    {/* SUBCARD VEHÍCULO */}
-                    {wo.vehiculo && (
-                      <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Vehículo</div>
-                        <div className="flex items-center gap-1.5 text-sm text-slate-700">
-                          <span className="text-slate-400">🚗</span>
-                          <span className="font-medium">{wo.vehiculo.marca || 'Sin Marca'}</span>
-                          <span className="text-slate-400">·</span>
-                          <span className="font-medium">{wo.vehiculo.modelo || 'Sin Modelo'}</span>
-                          <span className="text-slate-400">·</span>
-                          <span className="font-mono bg-white px-2 py-0.5 rounded text-xs font-semibold text-slate-700 border border-slate-300">
-                            {wo.vehiculo.patente}
-                          </span>
-                          {wo.kilometraje && (
-                            <>
-                              <span className="text-slate-400">·</span>
-                              <span className="text-xs text-slate-500">{wo.kilometraje.toLocaleString('es-CL')} km</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    {/* CARD VEHÍCULO */}
+                    {(() => {
+                      // Los datos ya vienen enriquecidos desde ordersWithVehicleRef
+                      const patente = wo.vehiculo?.patente || wo.patente_vehiculo;
+                      const marca = wo.vehiculo?.marca;
+                      const modelo = wo.vehiculo?.modelo;
+                      const kilometraje = wo.vehiculo?.kilometraje;
 
-                    {/* SUBCARD TRABAJOS REALIZADOS */}
+                      // Validar si marca/modelo son valores reales (no fallbacks genéricos)
+                      const marcaValida = marca && marca !== "Sin Marca" && marca !== "SIN MARCA";
+                      const modeloValido = modelo && modelo !== "Sin Modelo" && modelo !== "SIN MODELO";
+
+                      return (
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                              <Car className="w-4 h-4" /> Vehículo
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-1.5 text-sm">
+                            <div className="flex gap-2">
+                              <span className="text-slate-500 min-w-[90px]">Patente:</span>
+                              <span className="font-bold text-slate-900 font-mono">{patente}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <span className="text-slate-500 min-w-[90px]">Marca:</span>
+                              <span className={`font-semibold uppercase ${!marcaValida ? 'text-slate-400 italic' : 'text-slate-800'}`}>
+                                {marcaValida ? marca : 'No registrado'}
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <span className="text-slate-500 min-w-[90px]">Modelo:</span>
+                              <span className={`font-semibold uppercase ${!modeloValido ? 'text-slate-400 italic' : 'text-slate-800'}`}>
+                                {modeloValido ? modelo : 'No registrado'}
+                              </span>
+                            </div>
+                            {kilometraje && (
+                              <div className="flex gap-2">
+                                <span className="text-slate-500 min-w-[90px]">Kilometraje:</span>
+                                <span className="font-medium text-slate-800">{kilometraje.toLocaleString('es-CL')} km</span>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })()}
+
+                    {/* CARD TRABAJOS REALIZADOS */}
                     {wo.detalles && wo.detalles.length > 0 && (
-                      <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Trabajos Realizados</div>
-                        <div className="space-y-2">
-                          {wo.detalles.map((detalle: any, idx: number) => (
-                            <div key={detalle.id || idx} className="bg-white rounded-md p-2.5 border border-slate-200">
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-slate-400 text-xs mt-0.5">•</span>
-                                <div className="flex justify-between items-baseline gap-3 flex-1">
-                                  <div className="text-sm font-semibold text-slate-900 flex-1">
-                                    {detalle.servicio_nombre}
-                                  </div>
-                                  <div className="text-sm font-bold text-slate-900 whitespace-nowrap">
-                                    ${detalle.precio?.toLocaleString('es-CL') || 0}
-                                  </div>
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <Wrench className="w-4 h-4" /> Trabajos Realizados
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {wo.detalles.map((detalle: any, idx: number) => (
+                              <div key={detalle.id || idx} className="flex justify-between items-start p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                <div className="flex-1">
+                                  <p className="font-semibold text-slate-900">{detalle.servicio_nombre}</p>
+                                  {detalle.descripcion && (
+                                    <p className="text-xs text-slate-600 mt-0.5">{detalle.descripcion}</p>
+                                  )}
+                                  {detalle.producto && (
+                                    <div className="text-xs text-slate-500 mt-1">
+                                      📦 {detalle.producto.nombre} (SKU: {detalle.producto.sku})
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col items-end gap-1 ml-4">
+                                  <span className="font-bold text-emerald-600">
+                                    ${((detalle.precio || 0) * (detalle.cantidad || 1)).toLocaleString('es-CL')}
+                                  </span>
+                                  {detalle.cantidad && detalle.cantidad > 1 && (
+                                    <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
+                                      x{detalle.cantidad}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                              {detalle.descripcion && (
-                                <div className="text-xs text-slate-500 mt-1.5 pl-5">
-                                  {detalle.descripcion}
-                                </div>
-                              )}
-                              {detalle.producto && (
-                                <div className="text-[11px] text-slate-500 mt-1 pl-5">
-                                  📦 {detalle.producto.nombre} (SKU: {detalle.producto.sku})
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
                     )}
 
-                    {/* FOOTER PERSONAL - Discreto */}
-                    <div className="text-xs text-slate-500 pt-2 border-t border-slate-200">
-                      <span>Realizado:</span> {wo.realizado_por || 'No especificado'}
-                      {wo.revisado_por && (
-                        <>
-                          <span className="mx-2">·</span>
-                          <span className="inline-flex items-center gap-1">
-                            <span className="text-emerald-600">✓</span>
-                            <span className="text-slate-600">Revisado:</span>
-                            <span className="font-bold text-slate-700">{wo.revisado_por}</span>
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                    {/* INFO ADICIONAL */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-semibold text-slate-700">Información General</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <Label className="text-slate-600">Fecha de Ingreso:</Label>
+                          <span className="font-medium">{new Date(wo.fecha_ingreso).toLocaleDateString('es-CL')}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <Label className="text-slate-600">Realizado por:</Label>
+                          <span className="font-medium">{wo.realizado_por || 'No especificado'}</span>
+                        </div>
+                        {wo.revisado_por && (
+                          <div className="flex justify-between">
+                            <Label className="text-slate-600">Revisado por:</Label>
+                            <span className="font-medium">{wo.revisado_por}</span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </CardContent>
+                </Card>
               ))
           )}
         </div>
       </DialogContent>
+
+      {/* Dialog de Edición de Vehículo */}
+      <Dialog open={!!editingVehicle} onOpenChange={(open) => !open && setEditingVehicle(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Car className="w-5 h-5 text-blue-600" />
+              Completar Datos del Vehículo
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div>
+              <Label className="text-slate-600 text-xs mb-1.5 block">Patente</Label>
+              <Input
+                value={editingVehicle?.patente || ""}
+                disabled
+                className="font-mono font-bold bg-slate-50"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-600 text-xs mb-1.5 block">Marca</Label>
+              <Input
+                value={formMarca}
+                onChange={(e) => setFormMarca(e.target.value.toUpperCase())}
+                placeholder="Ej: TOYOTA"
+                className="uppercase"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-600 text-xs mb-1.5 block">Modelo</Label>
+              <Input
+                value={formModelo}
+                onChange={(e) => setFormModelo(e.target.value.toUpperCase())}
+                placeholder="Ej: YARIS"
+                className="uppercase"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setEditingVehicle(null)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveVehicle}
+                disabled={!formMarca.trim() || !formModelo.trim()}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Guardar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
