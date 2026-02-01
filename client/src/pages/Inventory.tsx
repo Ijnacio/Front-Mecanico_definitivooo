@@ -446,6 +446,20 @@ function EditProductDialog({ product, open, onOpenChange, categories }: { produc
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-5">
+              <FormField
+                control={form.control}
+                name="stock_minimo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stock Mínimo (Alerta)</FormLabel>
+                    <FormControl><Input {...field} type="number" min="1" onChange={e => field.onChange(parseInt(e.target.value))} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button type="submit" disabled={updateMutation.isPending}>Guardar</Button>
