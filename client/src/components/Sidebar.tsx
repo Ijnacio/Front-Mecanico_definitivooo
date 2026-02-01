@@ -70,6 +70,41 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-slate-800 space-y-2">
+        {/* Accesos Rápidos - Solo para Trabajadores */}
+        {userRole === "WORKER" && (
+          <div className="space-y-2 mb-2">
+            <button
+              onClick={() => {
+                setOpen(false);
+                setLocation('/work-orders?action=new');
+              }}
+              className="w-full group relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 p-4 transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3 text-white">
+                <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <Wrench className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-semibold">Nueva Orden</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setOpen(false);
+                setLocation('/counter-sales?action=new');
+              }}
+              className="w-full group relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 p-4 transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3 text-white">
+                <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-semibold">Venta Mesón</span>
+              </div>
+            </button>
+          </div>
+        )}
+
         {/* User Info */}
         <div className="bg-slate-800/50 rounded-xl p-3">
           <div className="flex items-center gap-2">

@@ -31,7 +31,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { cn } from "@/lib/utils";
+import { cn, formatRutCL, formatPhoneCL } from "@/lib/utils";
 import {
   useReactTable,
   getCoreRowModel,
@@ -127,7 +127,7 @@ export default function WorkOrders() {
       <PageHeader
         title="Órdenes de Trabajo"
         description="Gestione las órdenes de trabajo, seguimiento y facturación."
-        action={isAdmin ? <CreateWorkOrderDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} /> : undefined}
+        action={<CreateWorkOrderDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />}
       />
 
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
@@ -308,13 +308,13 @@ export default function WorkOrders() {
                     {selectedOrder.cliente.rut && (
                       <div className="flex gap-2">
                         <span className="text-slate-600 min-w-[80px]">RUT:</span>
-                        <span className="font-medium font-mono text-slate-900">{selectedOrder.cliente.rut}</span>
+                        <span className="font-medium font-mono text-slate-900">{formatRutCL(selectedOrder.cliente.rut)}</span>
                       </div>
                     )}
                     {selectedOrder.cliente.telefono && (
                       <div className="flex gap-2">
                         <span className="text-slate-600 min-w-[80px]">Teléfono:</span>
-                        <span className="font-medium font-mono text-slate-900">{selectedOrder.cliente.telefono}</span>
+                        <span className="font-medium font-mono text-slate-900">{formatPhoneCL(selectedOrder.cliente.telefono)}</span>
                       </div>
                     )}
                   </CardContent>
