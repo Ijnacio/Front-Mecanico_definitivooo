@@ -52,19 +52,32 @@ export function useCreateVehicle() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateVehicleDTO) => {
+      // Normalizar Patente: convertir a mayúsculas y trim
+      const normalizedData = {
+        ...data,
+        patente: data.patente.toUpperCase().trim(),
+      };
+
       const res = await fetch(getApiUrl("/vehicles"), {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify(data),
+        body: JSON.stringify(normalizedData),
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Error al crear vehículo");
+        let errorMessage = error.message || "Error al crear vehículo";
+        
+        if (res.status === 409) {
+          errorMessage = "Ya existe un vehículo con esa patente.";
+        }
+        
+        throw new Error(errorMessage);
       }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      queryClient.invalidateQueries({ queryKey: ["work-orders"] });
     },
   });
 }
@@ -73,19 +86,32 @@ export function useUpdateVehicle() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string } & Partial<CreateVehicleDTO>) => {
+      // Normalizar Patente si está presente
+      const normalizedData = {
+        ...data,
+        ...(data.patente && { patente: data.patente.toUpperCase().trim() }),
+      };
+
       const res = await fetch(getApiUrl(`/vehicles/${id}`), {
         method: "PATCH",
         headers: getAuthHeaders(),
-        body: JSON.stringify(data),
+        body: JSON.stringify(normalizedData),
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Error al actualizar vehículo");
+        let errorMessage = error.message || "Error al actualizar vehículo";
+        
+        if (res.status === 409) {
+          errorMessage = "Ya existe un vehículo con esa patente.";
+        }
+        
+        throw new Error(errorMessage);
       }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      queryClient.invalidateQueries({ queryKey: ["work-orders"] });
     },
   });
 }

@@ -51,9 +51,10 @@ interface AddProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProductCreated?: (product: any) => void;
+  fromPurchases?: boolean; // Si viene desde Compras, bloquear stock_actual
 }
 
-export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddProductDialogProps) {
+export function AddProductDialog({ open, onOpenChange, onProductCreated, fromPurchases = false }: AddProductDialogProps) {
   const { mutate: createProduct, isPending } = useCreateProduct();
   const { data: categories = [] } = useCategories();
   const { toast } = useToast();
@@ -83,7 +84,7 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
       marca: data.marca?.toUpperCase().trim() || undefined,
       calidad: data.calidad || undefined,
       precio_venta: data.precio_venta,
-      stock_actual: data.stock_actual,
+      stock_actual: fromPurchases ? 0 : data.stock_actual, // FORZAR 0 si viene desde Compras
       stock_minimo: data.stock_minimo,
       categoriaId: data.categoria_id, // Mapeo de categoria_id (form) a categoriaId (backend)
       modelosCompatiblesIds: selectedModels.map((m) => m.id),

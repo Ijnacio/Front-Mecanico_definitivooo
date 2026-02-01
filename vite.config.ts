@@ -30,6 +30,34 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core
+          'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
+          // Routing & State
+          'state-vendor': ['@tanstack/react-query', 'wouter'],
+          // UI Library (shadcn + Radix)
+          'ui-vendor': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-checkbox',
+            '@radix-ui/react-label',
+            '@radix-ui/react-slot'
+          ],
+          // Tables & Forms
+          'table-vendor': ['@tanstack/react-table'],
+          'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          // Icons & Utils
+          'utils-vendor': ['lucide-react', 'date-fns', 'clsx', 'tailwind-merge']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 600,
   },
   server: {
     proxy: {

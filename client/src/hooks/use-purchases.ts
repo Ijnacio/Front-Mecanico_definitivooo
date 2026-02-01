@@ -117,6 +117,13 @@ export function useCreatePurchase() {
       queryClient.invalidateQueries({ queryKey: ["purchases"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      
+      // Refetch inmediato para actualizar la tabla en tiempo real
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ["purchases"] });
+        queryClient.refetchQueries({ queryKey: ["products"] });
+      }, 100);
     },
   });
 }

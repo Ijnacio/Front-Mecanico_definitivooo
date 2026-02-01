@@ -1,20 +1,23 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Sidebar } from "@/components/Sidebar";
-import NotFound from "@/pages/not-found";
-import Reportes from "@/pages/Reportes";
-import Inventory from "@/pages/Inventory";
-import Purchases from "@/pages/Purchases";
-import CreatePurchase from "@/pages/CreatePurchase";
-import WorkOrders from "@/pages/WorkOrders";
-import CounterSales from "@/pages/CounterSales";
-import Login from "@/pages/Login";
-import Clients from "@/pages/Clients";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
+
+// Lazy loading de páginas para reducir bundle inicial
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Reportes = lazy(() => import("@/pages/Reportes"));
+const Inventory = lazy(() => import("@/pages/Inventory"));
+const Purchases = lazy(() => import("@/pages/Purchases"));
+const CreatePurchase = lazy(() => import("@/pages/CreatePurchase"));
+const WorkOrders = lazy(() => import("@/pages/WorkOrders"));
+const CounterSales = lazy(() => import("@/pages/CounterSales"));
+const Login = lazy(() => import("@/pages/Login"));
+const Clients = lazy(() => import("@/pages/Clients"));
 
 function ProtectedRoute({
   component: Component,
@@ -43,7 +46,15 @@ function ProtectedRoute({
     return <Redirect to="/work-orders" />;
   }
 
-  return <Component />;
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    }>
+      <Component />
+    </Suspense>
+  );
 }
 
 function Router() {

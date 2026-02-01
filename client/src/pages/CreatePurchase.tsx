@@ -102,29 +102,19 @@ export default function CreatePurchase() {
       return;
     }
 
-    // Construir payload
+// Construir payload - tipo_documento determina si el backend calcula IVA o no
     const payload: CreatePurchaseDTO = {
       proveedor_nombre: selectedProviderName,
       numero_documento: data.numero_documento?.trim() || undefined,
-      tipo_documento: data.tipo_documento || "FACTURA",
-      items: data.items.map((item: any) => {
-        let precio = parseInt(item.precio_costo) || 0;
-        // Si no incluye IVA, dividimos entre 1.19 para que cuando el backend
-        // calcule el total, quede sin el IVA extra (monto_iva quedará en 0)
-        if (!includeIva && precio > 0) {
-          precio = Math.round(precio / 1.19);
-        }
-        return {
-          sku: item.sku?.trim() || "",
-          nombre: item.nombre?.trim() || "",
-          marca: item.marca?.trim() || undefined,
-          calidad: item.calidad?.trim() || undefined,
-          cantidad: parseInt(item.cantidad) || 1,
-          precio_costo: precio,
-          precio_venta_sugerido: 0,
-          modelos_compatibles_ids: undefined,
-        };
-      }),
+      tipo_documento: includeIva ? "FACTURA" : "INFORMAL",
+      items: data.items.map((item: any) => ({
+        sku: item.sku?.trim().toUpperCase() || "",
+        nombre: item.nombre?.trim() || "",
+        marca: item.marca?.trim().toUpperCase() || undefined,
+        calidad: item.calidad?.trim() || undefined,
+        cantidad: parseInt(item.cantidad) || 1,
+        precio_costo: parseInt(item.precio_costo) || 0,
+      })),
     };
 
     createPurchase(payload, {
@@ -593,10 +583,12 @@ export default function CreatePurchase() {
                       <span>Subtotal Neto</span>
                       <span className="font-mono">${calculatedNeto.toLocaleString('es-CL')}</span>
                     </div>
-                    <div className={`flex justify-between ${includeIva ? 'text-slate-500' : 'text-slate-300 decoration-slate-300'}`}>
-                      <span>IVA (19%)</span>
-                      <span className="font-mono">${calculatedIVA.toLocaleString('es-CL')}</span>
-                    </div>
+                    {includeIva && (
+                      <div className="flex justify-between text-slate-500">
+                        <span>IVA (19%)</span>
+                        <span className="font-mono">${calculatedIVA.toLocaleString('es-CL')}</span>
+                      </div>
+                    )}
                     <div className="border-t border-slate-200 pt-3 mt-3 flex justify-between items-baseline">
                       <span className="text-lg font-bold text-slate-900">Total a Pagar</span>
                       <span className="text-2xl font-bold text-primary">${calculatedTotal.toLocaleString('es-CL')}</span>
@@ -651,6 +643,7 @@ export default function CreatePurchase() {
           open={isAddProductOpen}
           onOpenChange={setIsAddProductOpen}
           onProductCreated={handleProductCreated}
+          fromPurchases={true}
         />
       </div>
     </>

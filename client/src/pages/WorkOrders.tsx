@@ -295,24 +295,37 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
       numero_orden_papel: data.numero_orden_papel,
       realizado_por: data.realizado_por,
       cliente: { 
-        nombre: data.cliente_nombre, 
-        rut: data.cliente_rut.replace(/\./g, ""), 
-        email: data.cliente_email, 
-        telefono: data.cliente_telefono.replace(/\s/g, "").replace(/\+/g, "") // Quita espacios y el símbolo + 
+        nombre: data.cliente_nombre.trim(), 
+        rut: data.cliente_rut.replace(/\./g, "").replace(/-/g, "").toUpperCase().trim(), // Normalización completa
+        email: data.cliente_email.trim(), 
+        telefono: data.cliente_telefono.replace(/\s/g, "").replace(/\+/g, "").trim()
       },
       vehiculo: { 
-        patente: data.vehiculo_patente.replace(/-/g, '').toUpperCase(), 
-        marca: data.vehiculo_marca, 
-        modelo: data.vehiculo_modelo, 
+        patente: data.vehiculo_patente.replace(/-/g, "").toUpperCase().trim(), // Normalización completa
+        marca: data.vehiculo_marca.trim(), 
+        modelo: data.vehiculo_modelo.trim(), 
         kilometraje: data.vehiculo_km 
       },
       items
     }, {
       onSuccess: () => {
-        toast({ title: "Orden Creada exitosamente" });
+        toast({ 
+          title: "✅ Orden creada exitosamente",
+          className: "bg-emerald-50 text-emerald-900 border-emerald-200"
+        });
         onOpenChange(false);
         form.reset();
         queryClient.invalidateQueries({ queryKey: ["/work-orders"] });
+      },
+      onError: (err: any) => {
+        toast({
+          title: "❌ Error al crear orden",
+          description: err.message || "Ocurrió un problema al crear la orden de trabajo. Verifica los datos.",
+          variant: "destructive",
+          duration: 8000,
+          className: "bg-red-600 border-red-700 text-white [&>div]:text-white"
+        });
+        // NO cerrar modal, NO limpiar formulario - permitir corrección
       }
     });
   };
