@@ -59,28 +59,33 @@ export const createColumns = (
             header: "Vehículo",
             cell: ({ row }) => {
                 const wo = row.original as any;
-                const v = wo.vehiculo || wo.vehicle || {};
+                const v = wo.vehiculo || {};
                 
-                let marca = v.marca || v.brand || v.make || wo.vehiculo_marca || "";
-                let modelo = v.modelo || v.model || wo.vehiculo_modelo || "";
-                const patente = wo.patente_vehiculo || v.patente || v.licensePlate || "";
-
-                if (marca === "Sin Marca") marca = "";
-                if (modelo === "Sin Modelo") modelo = "";
+                const marca = v.marca || "";
+                const modelo = v.modelo || "";
+                const patente = wo.patente_vehiculo || v.patente || "";
+                const kilometraje = v.kilometraje || wo.kilometraje;
 
                 return (
-                    <div className="flex flex-col">
+                    <div className="flex flex-col gap-0.5">
                         {patente && (
-                            <span className="font-bold text-slate-800 font-mono text-xs mb-0.5 flex items-center gap-1">
+                            <span className="font-bold text-slate-800 font-mono text-xs flex items-center gap-1">
                                 {patente}
                             </span>
                         )}
-                        {marca || modelo ? (
-                            <span className="text-sm text-slate-600 capitalize">{marca} {modelo}</span>
+                        {(marca && marca !== "Sin Marca") || (modelo && modelo !== "Sin Modelo") ? (
+                            <span className="text-xs text-slate-600 uppercase">
+                                {marca} {modelo}
+                            </span>
                         ) : (
                             <span className="text-xs text-slate-400 italic flex items-center gap-1">
                                 <Car className="w-3 h-3" />
                                 Sin info
+                            </span>
+                        )}
+                        {kilometraje > 0 && (
+                            <span className="text-[10px] text-slate-500">
+                                {kilometraje.toLocaleString('es-CL')} km
                             </span>
                         )}
                     </div>

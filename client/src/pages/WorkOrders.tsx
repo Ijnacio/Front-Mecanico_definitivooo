@@ -10,8 +10,10 @@ import {
 } from "@/hooks/use-work-orders";
 import { useVehicles } from "@/hooks/use-vehicles";
 import { useProducts } from "@/hooks/use-products";
+import { useCategories } from "@/hooks/use-categories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { createColumns } from "@/components/work-orders/columns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -19,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { 
   Car, User, Calendar, Filter, RefreshCcw, ChevronDown, 
-  Wrench, Plus, Search, Loader2, ChevronsUpDown, ChevronUp, ChevronDown as ChevronDownIcon, Mail 
+  Wrench, Plus, Search, Loader2, ChevronUp, ChevronDown as ChevronDownIcon, Mail, Package, Trash2, Phone
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,8 +29,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import {
   useReactTable,
@@ -183,6 +183,169 @@ export default function WorkOrders() {
           </TableBody>
         </Table>
       </div>
+
+      <CreateWorkOrderDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+
+      {/* Sheet de Detalles de Orden */}
+      <Sheet open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          {selectedOrder && (
+            <>
+              <SheetHeader className="pb-4 border-b">
+                <SheetTitle className="flex items-center justify-between">
+                  <span>Orden de Trabajo #{selectedOrder.numero_orden_papel}</span>
+                  <Badge className={cn(
+                    selectedOrder.estado === "FINALIZADA" && "bg-emerald-500",
+                    selectedOrder.estado === "EN_PROCESO" && "bg-amber-500",
+                    selectedOrder.estado === "CANCELADA" && "bg-red-500"
+                  )}>
+                    {selectedOrder.estado}
+                  </Badge>
+                </SheetTitle>
+              </SheetHeader>
+
+              <div className="space-y-6 pt-6">
+                {/* Información General */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold text-slate-700">Información General</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Fecha de Ingreso:</span>
+                      <span className="font-medium">{new Date(selectedOrder.fecha_ingreso).toLocaleDateString('es-CL')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Realizado por:</span>
+                      <span className="font-medium">{selectedOrder.realizado_por}</span>
+                    </div>
+                    {selectedOrder.revisado_por && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Revisado por:</span>
+                        <span className="font-medium">{selectedOrder.revisado_por}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Cliente */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                      <User className="w-4 h-4" /> Cliente
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Nombre:</span>
+                      <span className="font-medium">{selectedOrder.cliente.nombre}</span>
+                    </div>
+                    {selectedOrder.cliente.rut && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">RUT:</span>
+                        <span className="font-medium font-mono">{selectedOrder.cliente.rut}</span>
+                      </div>
+                    )}
+                    {selectedOrder.cliente.telefono && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Teléfono:</span>
+                        <span className="font-medium font-mono">{selectedOrder.cliente.telefono}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Vehículo */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                      <Car className="w-4 h-4" /> Vehículo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Patente:</span>
+                      <span className="font-bold font-mono">{selectedOrder.vehiculo?.patente || selectedOrder.patente_vehiculo}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Marca:</span>
+                      <span className={`font-medium uppercase ${selectedOrder.vehiculo?.marca === "SIN MARCA" ? "text-slate-400 italic" : ""}`}>
+                        {selectedOrder.vehiculo?.marca || "Sin Marca"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Modelo:</span>
+                      <span className={`font-medium uppercase ${selectedOrder.vehiculo?.modelo === "SIN MODELO" ? "text-slate-400 italic" : ""}`}>
+                        {selectedOrder.vehiculo?.modelo || "Sin Modelo"}
+                      </span>
+                    </div>
+                    {selectedOrder.vehiculo?.kilometraje && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Kilometraje:</span>
+                        <span className="font-medium">{selectedOrder.vehiculo.kilometraje.toLocaleString('es-CL')} km</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Servicios y Repuestos */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                      <Wrench className="w-4 h-4" /> Servicios y Repuestos
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {selectedOrder.detalles.map((detalle) => (
+                        <div key={detalle.id} className="flex justify-between items-start p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <div className="flex-1">
+                            <p className="font-semibold text-slate-900">{detalle.servicio_nombre}</p>
+                            {detalle.descripcion && (
+                              <p className="text-xs text-slate-600 mt-0.5">{detalle.descripcion}</p>
+                            )}
+                            {detalle.producto && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-[10px] bg-blue-50 border-blue-200">
+                                  <Package className="w-3 h-3 mr-1" />
+                                  SKU: {detalle.producto.sku}
+                                </Badge>
+                                <span className="text-xs text-slate-500">{detalle.producto.nombre}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1 ml-4">
+                            <span className="font-bold text-emerald-600">
+                              ${((detalle.precio || 0) * (detalle.cantidad || 1)).toLocaleString('es-CL')}
+                            </span>
+                            {detalle.producto && detalle.cantidad && (
+                              <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
+                                x{detalle.cantidad}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Total */}
+                <Card className="border-2 border-primary/20 bg-primary/5">
+                  <CardContent className="pt-6">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold text-slate-700">Total Cobrado:</span>
+                      <span className="text-2xl font-bold text-primary">
+                        ${selectedOrder.total_cobrado.toLocaleString('es-CL')}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -193,6 +356,9 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   const { data: allProducts = [] } = useProducts();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<Array<{ sku: string; nombre: string; cantidad: number; precio: number; stock: number }>>([]);
 
   const form = useForm({
     defaultValues: {
@@ -204,36 +370,45 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
 
   // Helpers de Formateo
   const formatRut = (value: string) => {
-    const clean = value.replace(/[^0-9kK]/g, "");
+    // Eliminar todo excepto números y K
+    const clean = value.replace(/[^0-9kK]/g, "").toUpperCase();
     if (!clean) return "";
+    
+    // Separar cuerpo y dígito verificador
     const body = clean.slice(0, -1);
-    const dv = clean.slice(-1).toUpperCase();
-    return body.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.") + "-" + dv;
+    const dv = clean.slice(-1);
+    
+    if (!body) return clean;
+    
+    // Formatear cuerpo con puntos (de derecha a izquierda)
+    const reversedBody = body.split("").reverse().join("");
+    const formatted = reversedBody.match(/.{1,3}/g)?.join(".") || "";
+    const finalBody = formatted.split("").reverse().join("");
+    
+    return `${finalBody}-${dv}`;
   };
 
   const formatPhone = (value: string) => {
-  // Elimina todo lo que no sea número
-  const clean = value.replace(/\D/g, "");
-  if (clean.length === 0) return "";
-
-  // Si empieza por 2 (Fijo): X XXXX XXXX
-  if (clean.startsWith("2")) {
-    const part1 = clean.slice(0, 1);
-    const part2 = clean.slice(1, 5);
-    const part3 = clean.slice(5, 9);
-    return [part1, part2, part3].filter(Boolean).join(" ");
-  } 
-  
-  // Si empieza por 5 (Móvil/Internacional): +XX X XXXX XXXX
-  if (clean.startsWith("5")) {
-    const part1 = "+" + clean.slice(0, 2);
-    const part2 = clean.slice(2, 3);
-    const part3 = clean.slice(3, 7);
-    const part4 = clean.slice(7, 11);
-    return [part1, part2, part3, part4].filter(Boolean).join(" ");
-  }
-
-  return clean; // Retorna el número limpio si no cumple los criterios
+    // Eliminar todo excepto números y el símbolo +
+    let clean = value.replace(/[^0-9+]/g, "");
+    
+    // Si empieza con +56, mantenerlo
+    if (clean.startsWith("+56")) {
+      return clean;
+    }
+    
+    // Si empieza con 56, agregar +
+    if (clean.startsWith("56")) {
+      return `+${clean}`;
+    }
+    
+    // Si empieza con +, quitarlo y agregar +56
+    if (clean.startsWith("+")) {
+      clean = clean.slice(1);
+    }
+    
+    // Si no empieza con nada o solo tiene números, agregar +56
+    return clean ? `+56${clean}` : "+56";
   };
 
   const formatPatente = (value: string) => {
@@ -263,45 +438,55 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   const [services, setServices] = useState<Record<string, { 
     checked: boolean; 
     precio: number; 
-    descripcion: string; 
-    product_sku?: string; 
-    cantidad: number 
+    descripcion: string;
   }>>({});
 
   useEffect(() => {
     if (servicesCatalog.length > 0) {
       const initial: any = {};
-      servicesCatalog.forEach(s => { initial[s] = { checked: false, precio: 0, descripcion: "", cantidad: 1 }; });
+      servicesCatalog.forEach(s => { initial[s] = { checked: false, precio: 0, descripcion: "" }; });
       setServices(initial);
     }
   }, [servicesCatalog]);
 
   const calcularTotal = () => {
-    return Object.values(services).reduce((t, s) => s.checked ? t + (s.precio * s.cantidad) : t, 0);
+    const totalServicios = Object.values(services).reduce((t, s) => s.checked ? t + s.precio : t, 0);
+    const totalProductos = selectedProducts.reduce((t, p) => t + (p.cantidad * p.precio), 0);
+    return totalServicios + totalProductos;
   };
 
   const onSubmit = (data: any) => {
-    const items = Object.entries(services)
+    const serviciosItems = Object.entries(services)
       .filter(([_, s]) => s.checked)
       .map(([name, s]) => ({
         servicio_nombre: name,
-        descripcion: s.descripcion,
-        precio: s.precio,
-        product_sku: s.product_sku,
-        product_cantidad: s.product_sku ? s.cantidad : undefined
+        descripcion: s.descripcion || "",
+        precio: s.precio
       }));
+    
+    const productosItems = selectedProducts.map(p => ({
+      servicio_nombre: p.nombre,
+      descripcion: `Repuesto: ${p.nombre}`,
+      precio: p.precio,
+      product_sku: p.sku,
+      cantidad: p.cantidad
+    }));
+    
+    const items = [...serviciosItems, ...productosItems];
 
     createWorkOrder({
       numero_orden_papel: data.numero_orden_papel,
       realizado_por: data.realizado_por,
       cliente: { 
         nombre: data.cliente_nombre.trim(), 
-        rut: data.cliente_rut.replace(/\./g, "").replace(/-/g, "").toUpperCase().trim(), // Normalización completa
-        email: data.cliente_email.trim(), 
-        telefono: data.cliente_telefono.replace(/\s/g, "").replace(/\+/g, "").trim()
+        rut: data.cliente_rut.replace(/\./g, "").replace(/-/g, "").toUpperCase().trim(),
+        // Solo enviar email si tiene contenido válido
+        ...(data.cliente_email.trim() && { email: data.cliente_email.trim() }),
+        // Solo enviar teléfono si tiene contenido válido (más que +56)
+        ...(data.cliente_telefono.replace(/\s/g, "").replace(/\+/g, "").trim() && { telefono: data.cliente_telefono.replace(/\s/g, "").replace(/\+/g, "").trim() })
       },
       vehiculo: { 
-        patente: data.vehiculo_patente.replace(/-/g, "").toUpperCase().trim(), // Normalización completa
+        patente: data.vehiculo_patente.replace(/-/g, "").toUpperCase().trim(),
         marca: data.vehiculo_marca.trim(), 
         modelo: data.vehiculo_modelo.trim(), 
         kilometraje: data.vehiculo_km 
@@ -333,7 +518,7 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild><Button className="gap-2"><Plus className="w-4 h-4" /> Nueva Orden</Button></DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-amber-50 border-slate-300 shadow-xl">
         <DialogHeader><DialogTitle>Crear Orden de Trabajo</DialogTitle></DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -366,8 +551,8 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-3 p-4 border rounded-xl bg-white shadow-sm">
-                <h3 className="font-bold text-sm text-primary flex items-center gap-2"><User className="w-4 h-4"/> DATOS DEL CLIENTE</h3>
+              <div className="space-y-3 p-6 border-2 border-blue-200 rounded-xl bg-blue-50 shadow-sm">
+                <h3 className="font-bold text-sm text-slate-700 flex items-center gap-2"><User className="w-4 h-4 text-blue-500"/> DATOS DEL CLIENTE</h3>
                 <div className="grid grid-cols-1 gap-3">
                   <FormField control={form.control} name="cliente_nombre" render={({ field }) => (
                     <Input 
@@ -380,17 +565,19 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                   <div className="flex gap-2">
                     <FormField control={form.control} name="cliente_rut" render={({ field }) => (
                       <Input 
-                        placeholder="RUN" 
+                        placeholder="12.345.678-9" 
                         className="flex-1" 
-                        {...field} 
+                        {...field}
+                        maxLength={12}
                         onChange={e => field.onChange(formatRut(e.target.value))} 
                       />
                     )} />
                     <FormField control={form.control} name="cliente_telefono" render={({ field }) => (
                       <Input 
-                        placeholder="Teléfono" 
+                        placeholder="+56912345678" 
                         className="flex-1" 
-                        {...field} 
+                        {...field}
+                        maxLength={12}
                         onChange={e => field.onChange(formatPhone(e.target.value))} 
                       />
                     )} />
@@ -404,28 +591,35 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                 </div>
               </div>
 
-              <div className="space-y-3 p-4 border rounded-xl bg-white shadow-sm">
-                <h3 className="font-bold text-sm text-primary flex items-center gap-2"><Car className="w-4 h-4"/> DATOS DEL VEHÍCULO</h3>
+              <div className="space-y-3 p-6 border-2 border-blue-200 rounded-xl bg-blue-50 shadow-sm">
+                <h3 className="font-bold text-sm text-slate-700 flex items-center gap-2"><Car className="w-4 h-4 text-blue-500"/> DATOS DEL VEHÍCULO</h3>
                 <div className="grid grid-cols-1 gap-3">
                   <FormField control={form.control} name="vehiculo_patente" render={({ field }) => (
                     <Input 
-                      placeholder="PT-CL-23" 
+                      placeholder="PTCL23 o PT-CL-23" 
                       className="uppercase font-mono" 
                       {...field} 
                       maxLength={9}
-                      onChange={e => field.onChange(formatPatente(e.target.value))}
+                      onChange={e => field.onChange(formatPatente(e.target.value.toUpperCase()))}
                     />
                   )} />
                   <div className="flex gap-2">
                     <FormField control={form.control} name="vehiculo_marca" render={({ field }) => (
                       <Input 
                         placeholder="Marca" 
-                        className="flex-1" 
+                        className="flex-1 uppercase" 
                         {...field} 
-                        onChange={e => field.onChange(e.target.value.replace(/[0-9]/g, ""))}
+                        onChange={e => field.onChange(e.target.value.replace(/[0-9]/g, "").toUpperCase())}
                       />
                     )} />
-                    <FormField control={form.control} name="vehiculo_modelo" render={({ field }) => <Input placeholder="Modelo" className="flex-1" {...field} />} />
+                    <FormField control={form.control} name="vehiculo_modelo" render={({ field }) => (
+                      <Input 
+                        placeholder="Modelo" 
+                        className="flex-1 uppercase" 
+                        {...field}
+                        onChange={e => field.onChange(e.target.value.toUpperCase())}
+                      />
+                    )} />
                   </div>
                   <FormField 
                     control={form.control} 
@@ -453,8 +647,8 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="font-bold text-slate-700 flex items-center gap-2"><Wrench className="w-5 h-5" /> SERVICIOS Y REPUESTOS</h3>
+            <div className="space-y-4 bg-blue-50 p-6 rounded-xl border-2 border-blue-200 shadow-sm">
+              <h3 className="font-bold text-slate-700 flex items-center gap-2"><Wrench className="w-5 h-5 text-blue-500" /> SERVICIOS Y REPUESTOS</h3>
               <div className="grid gap-3">
                 {servicesCatalog.map((serviceName) => {
                   const keyword = serviceName.split(' ').pop() || "";
@@ -462,66 +656,122 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
 
                   return (
                     <div key={serviceName} className={cn("transition-all border rounded-xl p-4", isChecked ? "bg-blue-50/50 border-primary/30 shadow-sm" : "bg-white")}>
-                      <div className="flex flex-col md:flex-row gap-4 items-center">
+                      <div className="flex items-center gap-4">
                         <div className="flex items-center gap-3 flex-1">
                           <Checkbox checked={isChecked} onCheckedChange={v => setServices(p => ({ ...p, [serviceName]: { ...p[serviceName], checked: !!v } }))} />
                           <span className="font-semibold text-slate-800">{serviceName}</span>
                         </div>
-
                         {isChecked && (
-                          <div className="flex flex-1 gap-3 w-full items-center">
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="outline" className="flex-1 justify-between bg-white border-dashed">
-                                  {services[serviceName].product_sku ? `📦 SKU: ${services[serviceName].product_sku}` : `Buscar ${keyword}...`}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[300px] p-0" align="start">
-                                <Command>
-                                  <CommandInput placeholder={`Filtrando ${keyword}...`} />
-                                  <CommandList>
-                                    <CommandEmpty>No hay productos en {keyword}.</CommandEmpty>
-                                    <CommandGroup heading="Sugerencias">
-                                      <CommandItem onSelect={() => setServices(p => ({ ...p, [serviceName]: { ...p[serviceName], product_sku: undefined } }))}>Solo mano de obra</CommandItem>
-                                      {allProducts
-                                        .filter(p => p.stock_actual > 0 && (p.nombre.toLowerCase().includes(keyword.toLowerCase()) || (p.categoria?.nombre || "").toLowerCase().includes(keyword.toLowerCase())))
-                                        .map(p => (
-                                          <CommandItem key={p.id} onSelect={() => setServices(pr => ({ ...pr, [serviceName]: { ...pr[serviceName], product_sku: p.sku, precio: pr[serviceName].precio || p.precio_venta } }))}>
-                                            <div className="flex flex-col">
-                                              <span className="font-medium">{p.nombre}</span>
-                                              <span className="text-xs text-muted-foreground">SKU: {p.sku} | Stock: {p.stock_actual} | ${p.precio_venta.toLocaleString()}</span>
-                                            </div>
-                                          </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-
-                            <div className="flex items-center border rounded-lg bg-white overflow-hidden h-10 shadow-sm">
-                              <Button type="button" variant="ghost" size="icon" className="h-full rounded-none border-r w-8 hover:bg-slate-100" onClick={() => setServices(p => ({ ...p, [serviceName]: { ...p[serviceName], cantidad: Math.max(1, p[serviceName].cantidad - 1) } }))}>
-                                <ChevronDownIcon className="w-4 h-4" />
-                              </Button>
-                              <span className="px-3 font-mono font-bold min-w-[40px] text-center">{services[serviceName].cantidad}</span>
-                              <Button type="button" variant="ghost" size="icon" className="h-full rounded-none border-l w-8 hover:bg-slate-100" onClick={() => setServices(p => ({ ...p, [serviceName]: { ...p[serviceName], cantidad: p[serviceName].cantidad + 1 } }))}>
-                                <ChevronUp className="w-4 h-4" />
-                              </Button>
-                            </div>
-
-                            <div className="relative w-32">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
-                              <Input type="number" className="pl-7 text-right font-bold text-primary focus-visible:ring-primary" value={services[serviceName].precio || ""} onChange={e => setServices(p => ({ ...p, [serviceName]: { ...p[serviceName], precio: parseInt(e.target.value) || 0 } }))} />
-                            </div>
+                          <div className="relative w-36">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                            <Input 
+                              type="number" 
+                              placeholder="Precio" 
+                              className="pl-7 text-right font-bold text-primary" 
+                              value={services[serviceName].precio || ""} 
+                              onChange={e => setServices(p => ({ ...p, [serviceName]: { ...p[serviceName], precio: parseInt(e.target.value) || 0 } }))} 
+                            />
                           </div>
                         )}
                       </div>
-                      {isChecked && <Input placeholder="Descripción detallada del trabajo realizado..." className="mt-3 bg-white/50 text-sm italic" value={services[serviceName].descripcion} onChange={e => setServices(p => ({ ...p, [serviceName]: { ...p[serviceName], descripcion: e.target.value } }))} />}
+                      {isChecked && (
+                        <Input 
+                          placeholder="Descripción del servicio..." 
+                          className="mt-3 bg-white/50 text-sm italic" 
+                          value={services[serviceName].descripcion} 
+                          onChange={e => setServices(p => ({ ...p, [serviceName]: { ...p[serviceName], descripcion: e.target.value } }))} 
+                        />
+                      )}
                     </div>
                   );
                 })}
               </div>
+            </div>
+
+            {/* PANEL GLOBAL DE PRODUCTOS */}
+            <div className="space-y-4 bg-green-50 p-6 rounded-xl border-2 border-green-200 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                  <Package className="w-5 h-5 text-green-600" /> 
+                  REPUESTOS UTILIZADOS
+                </h3>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-emerald-400 hover:bg-emerald-500 text-white gap-2"
+                  onClick={() => setProductModalOpen(true)}
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar Repuesto
+                </Button>
+              </div>
+
+              {selectedProducts.length === 0 ? (
+                <div className="text-center py-6 text-slate-500 bg-white rounded-lg border-2 border-dashed border-slate-200">
+                  <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Sin repuestos agregados</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {selectedProducts.map((prod, idx) => (
+                    <div key={idx} className="bg-white p-4 rounded-lg border border-green-200 flex items-center gap-4">
+                      <div className="flex-1">
+                        <p className="font-semibold text-slate-900">{prod.nombre}</p>
+                        <p className="text-xs text-slate-500">SKU: {prod.sku} • Stock disponible: {prod.stock}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => {
+                            const updated = [...selectedProducts];
+                            updated[idx].cantidad = Math.max(1, updated[idx].cantidad - 1);
+                            setSelectedProducts(updated);
+                          }}
+                        >
+                          <ChevronDownIcon className="w-4 h-4" />
+                        </Button>
+                        <span className="font-mono font-bold w-12 text-center">{prod.cantidad}</span>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => {
+                            const updated = [...selectedProducts];
+                            if (updated[idx].cantidad < updated[idx].stock) {
+                              updated[idx].cantidad += 1;
+                              setSelectedProducts(updated);
+                            } else {
+                              toast({
+                                title: "⚠️ Stock insuficiente",
+                                description: `Solo hay ${updated[idx].stock} unidades disponibles`,
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </Button>
+                        <span className="text-emerald-600 font-bold w-24 text-right">
+                          ${(prod.precio * prod.cantidad).toLocaleString('es-CL')}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:bg-red-50"
+                          onClick={() => setSelectedProducts(selectedProducts.filter((_, i) => i !== idx))}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="pt-4 border-t-2 border-slate-200">
@@ -533,10 +783,164 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
 
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isPending}>{isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creando...</> : "Crear Orden de Trabajo"}</Button>
+              <Button type="submit" disabled={isPending} className="bg-emerald-400 hover:bg-emerald-500 text-white">{isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creando...</> : "Crear Orden de Trabajo"}</Button>
             </div>
           </form>
         </Form>
+      </DialogContent>
+      
+      <ProductSelectorModal
+        open={productModalOpen}
+        onClose={() => setProductModalOpen(false)}
+        onSelect={(product) => {
+          const exists = selectedProducts.find(p => p.sku === product.sku);
+          if (exists) {
+            toast({
+              title: "⚠️ Producto ya agregado",
+              description: "Este repuesto ya está en la lista. Puedes modificar su cantidad.",
+              variant: "destructive"
+            });
+          } else {
+            setSelectedProducts([...selectedProducts, {
+              sku: product.sku,
+              nombre: product.nombre,
+              cantidad: 1,
+              precio: product.precio_venta,
+              stock: product.stock_actual
+            }]);
+            toast({
+              title: "✅ Repuesto agregado",
+              description: `${product.nombre} agregado a la orden`,
+              className: "bg-emerald-50 text-emerald-900 border-emerald-200"
+            });
+          }
+        }}
+      />
+    </Dialog>
+  );
+}
+
+// Componente: Selector de Productos con Filtros por Categoría
+function ProductSelectorModal({ 
+  open, 
+  onClose, 
+  onSelect 
+}: { 
+  open: boolean; 
+  onClose: () => void; 
+  onSelect: (product: any) => void;
+}) {
+  const { data: categories = [] } = useCategories();
+  const { data: allProducts = [] } = useProducts();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  console.log("📂 Categorías cargadas:", categories);
+  console.log("📦 Total productos:", allProducts.length);
+
+  const filteredProducts = useMemo(() => {
+    let products = allProducts.filter((p: any) => p.stock_actual > 0);
+    
+    if (selectedCategory) {
+      products = products.filter((p: any) => p.categoria?.id === selectedCategory);
+    }
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      products = products.filter((p: any) => 
+        p.nombre.toLowerCase().includes(query) || 
+        p.sku.toLowerCase().includes(query) ||
+        (p.marca && p.marca.toLowerCase().includes(query))
+      );
+    }
+    
+    return products;
+  }, [allProducts, selectedCategory, searchQuery]);
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[85vh] bg-amber-50">
+        <DialogHeader>
+          <DialogTitle className="text-slate-800 font-bold">🔍 Seleccionar Repuesto</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Buscar por nombre, SKU o marca..."
+              className="pl-10 bg-white border-blue-300 focus:border-blue-400"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-3 items-center">
+            <Select value={selectedCategory || "all"} onValueChange={(v) => setSelectedCategory(v === "all" ? null : v)}>
+              <SelectTrigger className="h-10 w-full md:w-[250px] bg-blue-50 border-blue-300 border-dashed flex items-center hover:bg-blue-100 transition-colors">
+                <SelectValue placeholder="Todas las Categorías" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  Todas las Categorías ({allProducts.filter((p: any) => p.stock_actual > 0).length})
+                </SelectItem>
+                {categories.length === 0 ? (
+                  <SelectItem value="empty" disabled>
+                    No hay categorías creadas
+                  </SelectItem>
+                ) : (
+                  categories.map((cat: any) => {
+                    const count = allProducts.filter((p: any) => p.stock_actual > 0 && p.categoria?.id === cat.id).length;
+                    return (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.nombre} ({count})
+                      </SelectItem>
+                    );
+                  })
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="max-h-[400px] overflow-y-auto space-y-2 p-2 bg-white rounded-lg border border-slate-200">
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                <Package className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                <p>No hay productos disponibles</p>
+              </div>
+            ) : (
+              filteredProducts.map((product: any) => (
+                <button
+                  key={product.id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(product);
+                    onClose();
+                  }}
+                  className="w-full p-3 text-left border border-blue-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-all bg-white"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-semibold text-slate-900">{product.nombre}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        SKU: {product.sku} • Stock: {product.stock_actual}
+                        {product.marca && ` • ${product.marca}`}
+                      </p>
+                      {product.categoria && (
+                        <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                          {product.categoria.nombre}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right ml-4">
+                      <p className="font-bold text-emerald-600">${product.precio_venta.toLocaleString('es-CL')}</p>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

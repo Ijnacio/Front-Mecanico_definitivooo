@@ -776,7 +776,7 @@ function SaleDetailsDialog({ sale }: { sale: any }) {
               <div key={detalle.id} className="font-mono text-sm group">
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-slate-900 font-medium">
-                    {detalle.producto.nombre}
+                    {detalle.producto?.nombre || "Producto sin nombre"}
                   </span>
                   {sale.tipo_movimiento === "VENTA" && (
                     <span className="text-slate-900 font-bold whitespace-nowrap">
@@ -786,7 +786,9 @@ function SaleDetailsDialog({ sale }: { sale: any }) {
                 </div>
                 <div className="flex justify-between text-xs text-slate-500">
                   <span>{detalle.cantidad} x ${detalle.precio_venta_unitario.toLocaleString('es-CL')}</span>
-                  <span className="tracking-tighter opacity-50">{detalle.producto.sku}</span>
+                  {detalle.producto?.sku && (
+                    <span className="tracking-tighter opacity-50">{detalle.producto.sku}</span>
+                  )}
                 </div>
               </div>
             ))}

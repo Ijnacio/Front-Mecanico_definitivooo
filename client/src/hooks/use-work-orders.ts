@@ -33,6 +33,7 @@ export interface WorkOrderDetail {
   servicio_nombre: string;
   descripcion: string | null;
   precio: number;
+  cantidad?: number;
   producto: {
     id: string;
     sku: string;
@@ -61,7 +62,7 @@ export interface CreateWorkOrderDTO {
     descripcion?: string;
     precio: number;
     product_sku?: string;
-    cantidad_producto?: number;
+    cantidad?: number; // Backend ahora acepta "cantidad"
   }[];
 }
 
@@ -135,6 +136,7 @@ export function useWorkOrders(search?: string) {
             servicio_nombre: item.servicio_nombre || item.nombre || "Sin nombre",
             descripcion: item.descripcion || null,
             precio: item.precio || 0,
+            cantidad: item.cantidad || item.cantidad_producto || 1,
             producto: item.producto || item.product_sku ? {
               id: item.producto?.id || item.product_id || "0",
               sku: item.producto?.sku || item.product_sku || "",
@@ -200,6 +202,7 @@ export function useCreateWorkOrder() {
       // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: ["work-orders"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["reports"] });
       queryClient.invalidateQueries({ queryKey: ["global-search"] });
@@ -207,6 +210,7 @@ export function useCreateWorkOrder() {
       // Forzar refetch inmediato
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: ["clients"] });
+        queryClient.refetchQueries({ queryKey: ["vehicles"] });
         queryClient.refetchQueries({ queryKey: ["work-orders"] });
       }, 100);
     },
