@@ -2,6 +2,7 @@ import { Client } from "@/hooks/use-clients";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Eye, Edit, ArrowUpDown } from "lucide-react";
+import { formatPhoneCL } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +49,11 @@ export const createColumns = (
   {
     accessorKey: "telefono",
     header: "Teléfono",
-    cell: ({ row }) => <div className="text-slate-700">{row.original.telefono || "-"}</div>,
+    cell: ({ row }) => (
+      <div className="text-slate-700 font-mono text-sm">
+        {row.original.telefono ? formatPhoneCL(row.original.telefono) : "-"}
+      </div>
+    ),
   },
   {
     accessorKey: "email",

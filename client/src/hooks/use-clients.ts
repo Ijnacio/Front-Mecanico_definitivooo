@@ -68,7 +68,7 @@ export function useUpdateClient() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CreateClientDTO> }) => {
       const res = await fetch(getApiUrl(`/clients/${id}`), {
-        method: "PUT",
+        method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });

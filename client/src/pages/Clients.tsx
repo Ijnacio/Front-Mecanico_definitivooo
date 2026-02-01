@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { formatPhoneCL } from "@/lib/utils";
 
 import {
   useReactTable,
@@ -71,13 +72,31 @@ export default function Clients() {
     });
   }, [clients, workOrders]);
 
+  // Función para normalizar texto: minúsculas + sin acentos
+  const normalizeText = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  };
+
   const filteredClients = useMemo(() => {
     if (!searchValue) return clientsWithStats;
-    const lower = searchValue.toLowerCase();
-    return clientsWithStats.filter(c =>
-      c.nombre.toLowerCase().includes(lower) ||
-      c.rut.toLowerCase().includes(lower)
-    );
+    const normalizedSearch = normalizeText(searchValue);
+    
+    return clientsWithStats.filter(c => {
+      const normalizedNombre = normalizeText(c.nombre || "");
+      const normalizedRut = normalizeText(c.rut || "");
+      const normalizedEmail = normalizeText(c.email || "");
+      const normalizedTelefono = normalizeText(c.telefono || "");
+      
+      return (
+        normalizedNombre.includes(normalizedSearch) ||
+        normalizedRut.includes(normalizedSearch) ||
+        normalizedEmail.includes(normalizedSearch) ||
+        normalizedTelefono.includes(normalizedSearch)
+      );
+    });
   }, [clientsWithStats, searchValue]);
 
   const handleEdit = (client: ClienteDetalle) => {
@@ -135,7 +154,7 @@ export default function Clients() {
           <div className="relative w-full lg:w-[350px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              placeholder="Buscar por nombre o RUT..."
+              placeholder="Buscar por nombre, RUT, email o teléfono..."
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               className="pl-10 h-10 bg-slate-50 border-slate-200 focus:bg-white"
@@ -256,19 +275,36 @@ function ClientHistoryDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        {/* HEADER SIMPLE */}
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <History className="w-5 h-5 text-primary" />
-            Historial de Atenciones - {client.nombre}
+          <DialogTitle className="text-xl font-bold text-slate-900">
+            Historial de Atenciones
           </DialogTitle>
-          <div className="flex items-center gap-4 text-sm text-slate-600 mt-1">
-            <span className="font-mono">{client.rut}</span>
-            {client.telefono && <span>📞 {client.telefono}</span>}
-          </div>
         </DialogHeader>
 
-        {/* Lista de Órdenes */}
-        <div className="space-y-3 mt-4">
+        {/* 1. CARD CLIENTE - Compacta y clara */}
+        <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Cliente</div>
+          <div className="text-2xl font-bold text-slate-900 mb-1">{client.nombre}</div>
+          <div className="text-sm text-slate-500 flex items-center gap-2">
+            <span>{client.rut}</span>
+            {client.telefono && (
+              <>
+                <span className="text-slate-400">·</span>
+                <span className="font-mono">{formatPhoneCL(client.telefono)}</span>
+              </>
+            )}
+            {client.email && (
+              <>
+                <span className="text-slate-400">·</span>
+                <span>{client.email}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 2. LISTA DE ÓRDENES DE TRABAJO - Cada una como card principal */}
+        <div className="space-y-4 mt-4">
           {workOrders.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <p>Este cliente no tiene órdenes de trabajo registradas</p>
@@ -277,83 +313,106 @@ function ClientHistoryDialog({
             workOrders
               .sort((a, b) => new Date(b.fecha_ingreso).getTime() - new Date(a.fecha_ingreso).getTime())
               .map((wo) => (
-                <div key={wo.id} className="border border-slate-200 rounded-lg p-4 bg-white hover:border-slate-300 transition-colors">
-                  {/* Header de la OT */}
-                  <div className="flex justify-between items-start mb-3 pb-3 border-b border-slate-100">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-base text-slate-900">OT #{wo.numero_orden_papel}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${wo.estado === 'FINALIZADA' ? 'bg-emerald-100 text-emerald-700' :
-                          wo.estado === 'EN_PROCESO' ? 'bg-blue-100 text-blue-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
-                          {wo.estado}
-                        </span>
-                      </div>
-                      <div className="text-sm text-slate-600 mt-1">
+                <div key={wo.id} className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                  
+                  {/* HEADER DE LA CARD OT */}
+                  <div className="flex items-start justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-base font-bold text-slate-900">OT #{wo.numero_orden_papel}</span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                        wo.estado === 'FINALIZADA' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                        wo.estado === 'EN_PROCESO' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                        'bg-red-100 text-red-700 border border-red-200'
+                      }`}>
+                        {wo.estado}
+                      </span>
+                      <span className="text-xs text-slate-500">
                         {new Date(wo.fecha_ingreso).toLocaleDateString('es-CL', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
                         })}
-                      </div>
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-emerald-600">
-                        ${wo.total_cobrado?.toLocaleString('es-CL') || 0}
-                      </div>
+                    <div className="text-xl font-bold text-emerald-600">
+                      ${wo.total_cobrado?.toLocaleString('es-CL') || 0}
                     </div>
                   </div>
 
-                  {/* Información del Vehículo */}
-                  {wo.vehiculo && (
-                    <div className="bg-blue-50 rounded-md p-3 mb-3 border border-blue-100">
-                      <div className="font-medium text-slate-900">
-                        🚗 {wo.vehiculo.marca} {wo.vehiculo.modelo} - <span className="font-mono font-bold">{wo.vehiculo.patente}</span>
-                      </div>
-                      {wo.kilometraje && (
-                        <div className="text-sm text-slate-600 mt-1">
-                          📏 {wo.kilometraje.toLocaleString('es-CL')} km
+                  {/* CONTENIDO DE LA CARD OT */}
+                  <div className="p-4 space-y-4">
+                    
+                    {/* SUBCARD VEHÍCULO */}
+                    {wo.vehiculo && (
+                      <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Vehículo</div>
+                        <div className="flex items-center gap-1.5 text-sm text-slate-700">
+                          <span className="text-slate-400">🚗</span>
+                          <span className="font-medium">{wo.vehiculo.marca || 'Sin Marca'}</span>
+                          <span className="text-slate-400">·</span>
+                          <span className="font-medium">{wo.vehiculo.modelo || 'Sin Modelo'}</span>
+                          <span className="text-slate-400">·</span>
+                          <span className="font-mono bg-white px-2 py-0.5 rounded text-xs font-semibold text-slate-700 border border-slate-300">
+                            {wo.vehiculo.patente}
+                          </span>
+                          {wo.kilometraje && (
+                            <>
+                              <span className="text-slate-400">·</span>
+                              <span className="text-xs text-slate-500">{wo.kilometraje.toLocaleString('es-CL')} km</span>
+                            </>
+                          )}
                         </div>
+                      </div>
+                    )}
+
+                    {/* SUBCARD TRABAJOS REALIZADOS */}
+                    {wo.detalles && wo.detalles.length > 0 && (
+                      <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2">Trabajos Realizados</div>
+                        <div className="space-y-2">
+                          {wo.detalles.map((detalle: any, idx: number) => (
+                            <div key={detalle.id || idx} className="bg-white rounded-md p-2.5 border border-slate-200">
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-slate-400 text-xs mt-0.5">•</span>
+                                <div className="flex justify-between items-baseline gap-3 flex-1">
+                                  <div className="text-sm font-semibold text-slate-900 flex-1">
+                                    {detalle.servicio_nombre}
+                                  </div>
+                                  <div className="text-sm font-bold text-slate-900 whitespace-nowrap">
+                                    ${detalle.precio?.toLocaleString('es-CL') || 0}
+                                  </div>
+                                </div>
+                              </div>
+                              {detalle.descripcion && (
+                                <div className="text-xs text-slate-500 mt-1.5 pl-5">
+                                  {detalle.descripcion}
+                                </div>
+                              )}
+                              {detalle.producto && (
+                                <div className="text-[11px] text-slate-500 mt-1 pl-5">
+                                  📦 {detalle.producto.nombre} (SKU: {detalle.producto.sku})
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* FOOTER PERSONAL - Discreto */}
+                    <div className="text-xs text-slate-500 pt-2 border-t border-slate-200">
+                      <span>Realizado:</span> {wo.realizado_por || 'No especificado'}
+                      {wo.revisado_por && (
+                        <>
+                          <span className="mx-2">·</span>
+                          <span className="inline-flex items-center gap-1">
+                            <span className="text-emerald-600">✓</span>
+                            <span className="text-slate-600">Revisado:</span>
+                            <span className="font-bold text-slate-700">{wo.revisado_por}</span>
+                          </span>
+                        </>
                       )}
                     </div>
-                  )}
-
-                  {/* Detalles de Servicios - ENFOQUE PRINCIPAL */}
-                  {wo.detalles && wo.detalles.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Trabajos Realizados</div>
-                      {wo.detalles.map((detalle: any, idx: number) => (
-                        <div key={detalle.id || idx} className="bg-slate-50 rounded-md p-3 border border-slate-200">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="font-semibold text-slate-900">{detalle.servicio_nombre}</div>
-                            <div className="font-bold text-slate-900 ml-4">
-                              ${detalle.precio?.toLocaleString('es-CL') || 0}
-                            </div>
-                          </div>
-
-                          {detalle.descripcion && (
-                            <div className="text-sm text-slate-700 bg-white rounded p-2 border border-slate-200 mt-2">
-                              <span className="font-medium text-slate-500">Descripción:</span> {detalle.descripcion}
-                            </div>
-                          )}
-
-                          {detalle.producto && (
-                            <div className="text-xs text-blue-700 mt-2 bg-blue-50 rounded px-2 py-1 inline-block">
-                              📦 Producto: {detalle.producto.nombre} (SKU: {detalle.producto.sku})
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Mecánico */}
-                  <div className="mt-3 pt-3 border-t border-slate-200 text-xs text-slate-600">
-                    <span className="font-medium">👨‍🔧 {wo.realizado_por || 'No especificado'}</span>
-                    {wo.revisado_por && (
-                      <span className="ml-4">✅ Revisado: {wo.revisado_por}</span>
-                    )}
                   </div>
                 </div>
               ))
@@ -377,6 +436,30 @@ function EditClientDialog({
   const { mutate: updateClient, isPending } = useUpdateClient();
   const { toast } = useToast();
 
+  // Función para normalizar teléfono al cargar
+  const normalizePhoneForDisplay = (phone?: string) => {
+    if (!phone) return "";
+    // Si ya tiene +56 9, extraer solo los 8 dígitos
+    const cleaned = phone.replace(/[^0-9]/g, "");
+    if (cleaned.startsWith("569") && cleaned.length === 11) {
+      return cleaned.substring(3); // Retorna solo los 8 dígitos
+    }
+    if (cleaned.startsWith("56") && cleaned.length === 10) {
+      return cleaned.substring(2); // Retorna solo los 8 dígitos
+    }
+    if (cleaned.length === 9 && cleaned.startsWith("9")) {
+      return cleaned.substring(1); // Retorna solo los 8 dígitos
+    }
+    return cleaned.substring(0, 8); // Máximo 8 dígitos
+  };
+
+  // Función para formatear al guardar
+  const formatPhoneForSave = (phone: string) => {
+    const cleaned = phone.replace(/[^0-9]/g, "");
+    if (!cleaned) return "";
+    return `+56 9${cleaned}`;
+  };
+
   const clientSchema = z.object({
     nombre: z.string().min(3, "El nombre es obligatorio"),
     rut: z.string().min(8, "RUT inválido"),
@@ -389,7 +472,7 @@ function EditClientDialog({
     defaultValues: {
       nombre: client?.nombre || "",
       rut: client?.rut || "",
-      telefono: client?.telefono || "+56 9",
+      telefono: normalizePhoneForDisplay(client?.telefono),
       email: client?.email || ""
     }
   });
@@ -400,7 +483,7 @@ function EditClientDialog({
       form.reset({
         nombre: client.nombre,
         rut: client.rut,
-        telefono: client.telefono || "+56 9",
+        telefono: normalizePhoneForDisplay(client.telefono),
         email: client.email || ""
       });
     }
@@ -409,11 +492,17 @@ function EditClientDialog({
   const onSubmit = (data: z.infer<typeof clientSchema>) => {
     if (!client) return;
 
+    // Formatear teléfono antes de enviar
+    const dataToSend = {
+      ...data,
+      telefono: data.telefono ? formatPhoneForSave(data.telefono) : undefined
+    };
+
     updateClient(
-      { id: client.id, data },
+      { id: client.id, data: dataToSend },
       {
         onSuccess: () => {
-          toast({ title: "✅ Cliente actualizado exitosamente" });
+          toast({ title: "Cliente actualizado exitosamente" });
           onOpenChange(false);
         },
         onError: (err: any) => toast({
@@ -444,7 +533,10 @@ function EditClientDialog({
                 <FormItem>
                   <FormLabel>RUT</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="12.345.678-9" />
+                    <Input
+                      {...field}
+                      placeholder="998877111"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -470,8 +562,23 @@ function EditClientDialog({
                 <FormItem>
                   <FormLabel>Teléfono</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium pointer-events-none select-none">
+                        +56 9
+                      </div>
+                      <Input
+                        {...field}
+                        placeholder="12345678"
+                        className="pl-16 font-mono"
+                        maxLength={8}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9]/g, "");
+                          field.onChange(value);
+                        }}
+                      />
+                    </div>
                   </FormControl>
+                  <div className="text-xs text-slate-500 mt-1">Solo los 8 dígitos después del 9</div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -547,7 +654,10 @@ function CreateClientDialog({ open, onOpenChange }: { open: boolean; onOpenChang
                 <FormItem>
                   <FormLabel>RUT</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="12.345.678-9" />
+                    <Input
+                      {...field}
+                      placeholder="998877111"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
