@@ -45,14 +45,17 @@ export default function Purchases() {
 
   const purchasesWithTotals: PurchaseWithTotals[] = useMemo(() => {
     return allPurchases.map((p: any) => {
-      const neto = (p.detalles || []).reduce((acc: any, d: any) => {
+      // Usar montos del backend si existen, sino calcular desde detalles
+      const netoCalculado = (p.detalles || []).reduce((acc: any, d: any) => {
         const cantidad = Number(d.cantidad) || 0;
         const unitPrice = Number(d.precio_costo_unitario ?? d.precio_unitario) || 0;
         return acc + (cantidad * unitPrice);
       }, 0);
 
-      const iva = Math.round(neto * 0.19);
-      const total = neto + iva;
+      // Preferir valores del backend (respeta tipo_documento FACTURA/INFORMAL)
+      const neto = p.monto_neto ?? netoCalculado;
+      const iva = p.monto_iva ?? 0; // Backend calcula según tipo_documento
+      const total = p.monto_total ?? (neto + iva);
       const totalItems = (p.detalles || []).length;
       const totalUnits = (p.detalles || []).reduce((acc: any, d: any) => acc + (Number(d.cantidad) || 0), 0);
 
@@ -347,10 +350,12 @@ export default function Purchases() {
                   <span className="text-slate-600">Subtotal (Neto)</span>
                   <span className="font-semibold text-slate-900">${selectedPurchase.neto.toLocaleString('es-CL')}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">IVA (19%)</span>
-                  <span className="font-semibold text-slate-900">${selectedPurchase.iva.toLocaleString('es-CL')}</span>
-                </div>
+                {selectedPurchase.iva > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">IVA (19%)</span>
+                    <span className="font-semibold text-slate-900">${selectedPurchase.iva.toLocaleString('es-CL')}</span>
+                  </div>
+                )}
                 <div className="border-t border-slate-200 pt-3 mt-3 flex justify-between">
                   <span className="font-semibold text-slate-900">Total</span>
                   <span className="text-lg font-bold text-blue-600">${selectedPurchase.total.toLocaleString('es-CL')}</span>
