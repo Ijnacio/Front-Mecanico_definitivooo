@@ -330,13 +330,13 @@ function EditProductDialog({ product, open, onOpenChange, categories }: { produc
 
   const form = useForm({
     defaultValues: {
-      sku: product.sku,
-      nombre: product.nombre,
+      sku: product.sku || "",
+      nombre: product.nombre || "",
       marca: product.marca || "",
       calidad: product.calidad || "",
-      precio_venta: product.precio_venta,
-      stock_actual: product.stock_actual,
-      stock_minimo: product.stock_minimo,
+      precio_venta: product.precio_venta || 0,
+      stock_actual: product.stock_actual || 0,
+      stock_minimo: product.stock_minimo || 0,
       categoriaId: product.categoria?.id || "",
     },
   });
