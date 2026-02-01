@@ -839,7 +839,31 @@ function CreateClientDialog({ open, onOpenChange }: { open: boolean; onOpenChang
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="998877111"
+                      placeholder="12.345.678-9"
+                      className="font-mono"
+                      maxLength={12}
+                      onChange={(e) => {
+                        // Limpiar todo excepto números y K
+                        const clean = e.target.value.replace(/[^0-9kK]/g, "").toUpperCase();
+                        if (!clean) {
+                          field.onChange("");
+                          return;
+                        }
+                        // Limitar a 9 caracteres (8 dígitos + DV)
+                        const limited = clean.slice(0, 9);
+                        // Separar cuerpo y dígito verificador
+                        const body = limited.slice(0, -1);
+                        const dv = limited.slice(-1);
+                        if (!body) {
+                          field.onChange(limited);
+                          return;
+                        }
+                        // Formatear con puntos
+                        const reversedBody = body.split("").reverse().join("");
+                        const formatted = reversedBody.match(/.{1,3}/g)?.join(".") || "";
+                        const finalBody = formatted.split("").reverse().join("");
+                        field.onChange(`${finalBody}-${dv}`);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
