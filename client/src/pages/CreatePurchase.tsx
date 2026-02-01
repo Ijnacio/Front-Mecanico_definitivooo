@@ -624,7 +624,6 @@ function CreateProviderModal({
   const form = useForm({
     defaultValues: {
       nombre: "",
-      rut: "",
       telefono: "",
       email: "",
     },
@@ -633,7 +632,6 @@ function CreateProviderModal({
   const onSubmit = (data: any) => {
     const cleanData = {
       nombre: data.nombre,
-      ...(data.rut && { rut: data.rut.replace(/\./g, "").replace(/-/g, "").toUpperCase().trim() }),
       ...(data.telefono && { telefono: `+56 9${data.telefono}` }),
       ...(data.email && { email: data.email }),
     };
@@ -682,41 +680,7 @@ function CreateProviderModal({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="rut"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">RUT</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Ej: 76.123.456-7"
-                      className="h-11 bg-slate-50 border-slate-200 focus:bg-white font-mono"
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/[^0-9kK]/g, "").toUpperCase();
-                        if (!value) {
-                          field.onChange("");
-                          return;
-                        }
-                        const body = value.slice(0, -1);
-                        const dv = value.slice(-1);
-                        if (!body) {
-                          field.onChange(value);
-                          return;
-                        }
-                        const reversedBody = body.split("").reverse().join("");
-                        const formatted = reversedBody.match(/.{1,3}/g)?.join(".") || "";
-                        const finalBody = formatted.split("").reverse().join("");
-                        field.onChange(`${finalBody}-${dv}`);
-                      }}
-                    />
-                  </FormControl>
-                  <div className="text-xs text-slate-500 mt-1">Opcional</div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
 
             <FormField
               control={form.control}
