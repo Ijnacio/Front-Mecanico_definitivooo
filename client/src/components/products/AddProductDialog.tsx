@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCreateProduct } from "@/hooks/use-products";
-import { useCategories } from "@/hooks/use-categories";
+import { useCategories, useCreateCategory } from "@/hooks/use-categories";
 import { useToast } from "@/hooks/use-toast";
 import { VehicleModelMultiSelect } from "@/components/VehicleModelMultiSelect";
 import { VehicleModel } from "@/hooks/use-vehicle-models";
@@ -59,6 +59,7 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
   const { toast } = useToast();
   const [selectedModels, setSelectedModels] = useState<VehicleModel[]>([]);
   const [netPriceDisplay, setNetPriceDisplay] = useState("");
+  const [createCategoryOpen, setCreateCategoryOpen] = useState(false);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -207,18 +208,30 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs font-bold uppercase text-slate-500">Categoría</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Seleccionar..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setCreateCategoryOpen(true)}
+                        className="h-9 w-9 shrink-0"
+                        title="Crear nueva categoría"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -327,6 +340,138 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated }: AddPr
             </div>
           </form>
         </Form>
+      </DialogContent>
+
+      {/* Modal para crear nueva categoría */}
+      <CreateCategoryModal
+        open={createCategoryOpen}
+        onOpenChange={setCreateCategoryOpen}
+        onCategoryCreated={(categoryId) => {
+          form.setValue("categoria_id", categoryId);
+          setCreateCategoryOpen(false);
+        }}
+      />
+    </Dialog>
+  );
+}
+
+// Modal minimalista para crear categoría
+function CreateCategoryModal({
+  open,
+  onOpenChange,
+  onCategoryCreated
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCategoryCreated: (categoryId: string) => void;
+}) {
+  const createCategoryMutation = useCreateCategory();
+  const { toast } = useToast();
+  const [nombre, setNombre] = useState<string>("");
+  const [descripcion, setDescripcion] = useState<string>("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!nombre.trim()) {
+      toast({
+        title: "Error",
+        description: "El nombre de la categoría es obligatorio",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    createCategoryMutation.mutate(
+      {
+        nombre: nombre.trim(),
+        descripcion: descripcion.trim() || undefined
+      },
+      {
+        onSuccess: (newCategory: any) => {
+          toast({
+            title: "Categoría creada",
+            description: `${newCategory.nombre} ha sido agregada`,
+            className: "bg-emerald-50 text-emerald-900 border-emerald-200"
+          });
+          setNombre("");
+          setDescripcion("");
+          onCategoryCreated(newCategory.id);
+        },
+        onError: (error: any) => {
+          toast({
+            title: "Error",
+            description: error.message || "No se pudo crear la categoría",
+            variant: "destructive"
+          });
+        }
+      }
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold">Nueva Categoría</DialogTitle>
+          <DialogDescription>Crea una nueva categoría de productos</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">
+              Nombre *
+            </label>
+            <Input
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Ej: Frenos, Suspensión..."
+              className="h-10 bg-slate-50 border-slate-200 focus:bg-white"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">
+              Descripción (Opcional)
+            </label>
+            <Input
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              placeholder="Breve descripción..."
+              className="h-10 bg-slate-50 border-slate-200 focus:bg-white"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                onOpenChange(false);
+                setNombre("");
+                setDescripcion("");
+              }}
+              disabled={createCategoryMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={createCategoryMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {createCategoryMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creando...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Crear
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
