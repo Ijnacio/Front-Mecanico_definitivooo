@@ -70,10 +70,16 @@ function Router() {
 
   if (!isAuthenticated) {
     return (
-      <Switch>
-        <Route path="/login" component={Login} />
-        <Route component={() => <Redirect to="/login" />} />
-      </Switch>
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-screen bg-background">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      }>
+        <Switch>
+          <Route path="/login" component={Login} />
+          <Route component={() => <Redirect to="/login" />} />
+        </Switch>
+      </Suspense>
     );
   }
 
@@ -95,7 +101,11 @@ function Router() {
           <Route path="/work-orders" component={() => <ProtectedRoute component={WorkOrders} />} />
           <Route path="/counter-sales" component={() => <ProtectedRoute component={CounterSales} />} />
           <Route path="/clients" component={() => <ProtectedRoute component={Clients} />} />
-          <Route component={NotFound} />
+          <Route component={() => (
+            <Suspense fallback={<div className="flex items-center justify-center h-screen"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+              <NotFound />
+            </Suspense>
+          )} />
         </Switch>
       </main>
     </div>
