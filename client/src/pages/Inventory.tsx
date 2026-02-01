@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { useProducts, useDeleteProduct, useUpdateProduct } from "@/hooks/use-products";
@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { AddProductDialog } from "@/components/products/AddProductDialog";
 import { createColumns } from "@/components/inventory/columns";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -48,14 +49,6 @@ export default function Inventory() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('action') === 'new') {
-      setIsCreateOpen(true);
-      window.history.replaceState({}, '', '/inventory');
-    }
-  }, []);
-
   // Filter Logic
   const filteredProducts = useMemo(() => {
     const filtered = products.filter(product => {
@@ -91,6 +84,8 @@ export default function Inventory() {
   const deleteMutation = useDeleteProduct();
   const [editProduct, setEditProduct] = useState<any>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteProduct, setDeleteProduct] = useState<any>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const handleEdit = (product: any) => {
     setEditProduct(product);
@@ -98,21 +93,31 @@ export default function Inventory() {
   };
 
   const handleDelete = (product: any) => {
-    const confirmMessage = `¿Estás seguro de eliminar el producto ${product.sku}?\n\nNota: Si este producto está siendo usado en órdenes de trabajo, compras o ventas, no podrá ser eliminado.`;
-    if (confirm(confirmMessage)) {
-      deleteMutation.mutate(product.id, {
-        onSuccess: () => toast({
+    setDeleteProduct(product);
+    setDeleteOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteProduct) return;
+    
+    deleteMutation.mutate(deleteProduct.id, {
+      onSuccess: () => {
+        toast({
           title: "Producto eliminado",
           description: "El producto ha sido eliminado exitosamente.",
           className: "bg-emerald-50 text-emerald-900 border-emerald-200"
-        }),
-        onError: (err: any) => toast({
+        });
+        setDeleteOpen(false);
+        setDeleteProduct(null);
+      },
+      onError: (err: any) => {
+        toast({
           title: "Error al eliminar",
           description: err.message,
           variant: "destructive"
-        })
-      });
-    }
+        });
+      }
+    });
   };
 
   const columns = useMemo(() => createColumns(isAdmin, handleEdit, handleDelete), [isAdmin]);
@@ -318,6 +323,34 @@ export default function Inventory() {
           categories={categories}
         />
       )}
+
+      {/* AlertDialog para confirmar eliminación */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar producto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de eliminar <strong>{deleteProduct?.sku}</strong>?
+              <br /><br />
+              <span className="text-amber-600">
+                ⚠️ Si este producto está siendo usado en órdenes de trabajo, compras o ventas, no podrá ser eliminado.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteProduct(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -343,10 +376,10 @@ function EditProductDialog({ product, open, onOpenChange, categories }: { produc
 
   const onSubmit = (data: any) => {
     const payload = {
-      sku: data.sku,
-      nombre: data.nombre,
-      marca: data.marca,
-      calidad: data.calidad,
+      sku: data.sku.toUpperCase().trim(),
+      nombre: data.nombre.toUpperCase().trim(),
+      marca: data.marca?.toUpperCase().trim() || undefined,
+      calidad: data.calidad || undefined,
       precio_venta: data.precio_venta,
       stock_actual: data.stock_actual,
       stock_minimo: data.stock_minimo,

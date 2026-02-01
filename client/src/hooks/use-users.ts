@@ -19,7 +19,7 @@ interface ChangePasswordDTO {
  */
 export function useUsers() {
   return useQuery({
-    queryKey: ["/api/users"],
+    queryKey: ["users"],
     queryFn: async () => {
       const response = await fetch(getApiUrl("/users"), {
         headers: getAuthHeaders(),
@@ -57,7 +57,7 @@ export function useChangePassword() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
 }
@@ -83,7 +83,7 @@ export function useDeleteUser() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
 }

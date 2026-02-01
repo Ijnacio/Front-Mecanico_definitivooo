@@ -80,22 +80,26 @@ export function useWorkOrders(search?: string) {
       if (!res.ok) throw new Error("Error al cargar órdenes de trabajo");
       const data = await res.json();
 
-      console.log("📋 Órdenes recibidas del backend:", data);
+      if (import.meta.env.DEV) {
+        console.log("📋 Órdenes recibidas del backend:", data);
+      }
 
       // Adaptar datos del backend al formato esperado
       return data.map((wo: any) => {
         const detallesArray = wo.detalles || wo.items || [];
-        console.log("🔍 Procesando orden:", {
-          id: wo.id,
-          numero_orden: wo.numero_orden_papel,
-          tiene_items: !!wo.items,
-          tiene_detalles: !!wo.detalles,
-          items_count: (wo.items || []).length,
-          detalles_count: (wo.detalles || []).length,
-          detalles_finales: detallesArray.length,
-          raw_items: wo.items,
-          raw_detalles: wo.detalles,
-        });
+        if (import.meta.env.DEV) {
+          console.log("🔍 Procesando orden:", {
+            id: wo.id,
+            numero_orden: wo.numero_orden_papel,
+            tiene_items: !!wo.items,
+            tiene_detalles: !!wo.detalles,
+            items_count: (wo.items || []).length,
+            detalles_count: (wo.detalles || []).length,
+            detalles_finales: detallesArray.length,
+            raw_items: wo.items,
+            raw_detalles: wo.detalles,
+          });
+        }
 
         return {
           id: wo.id?.toString() || wo.id,
@@ -168,7 +172,9 @@ export function useCreateWorkOrder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateWorkOrderDTO) => {
-      console.log("📤 Enviando al backend:", JSON.stringify(data, null, 2));
+      if (import.meta.env.DEV) {
+        console.log("📤 Enviando al backend:", JSON.stringify(data, null, 2));
+      }
 
       const res = await fetch(getApiUrl("/work-orders"), {
         method: "POST",
@@ -176,17 +182,23 @@ export function useCreateWorkOrder() {
         body: JSON.stringify(data),
       });
 
-      console.log("📥 Respuesta del backend - Status:", res.status, res.statusText);
+      if (import.meta.env.DEV) {
+        console.log("📥 Respuesta del backend - Status:", res.status, res.statusText);
+      }
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("❌ Error del backend:", errorText);
+        if (import.meta.env.DEV) {
+          console.error("❌ Error del backend:", errorText);
+        }
 
         let errorMessage = "Error al crear orden de trabajo";
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.message || errorJson.error || errorMessage;
-          console.error("❌ Error parseado:", errorJson);
+          if (import.meta.env.DEV) {
+            console.error("❌ Error parseado:", errorJson);
+          }
         } catch {
           errorMessage = errorText || errorMessage;
         }

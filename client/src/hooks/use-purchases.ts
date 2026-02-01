@@ -87,7 +87,9 @@ export function usePurchases() {
           };
         });
       } catch (error) {
-        console.error("Error fetching purchases:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error fetching purchases:", error);
+        }
         return [];
       }
     },

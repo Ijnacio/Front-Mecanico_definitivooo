@@ -751,7 +751,19 @@ function CreateCounterSaleDialog({ open, onOpenChange }: { open: boolean; onOpen
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          // Limpiar todo al cerrar el modal (ya sea por cancelar o por X)
+          setTipoMovimiento("VENTA");
+          setVendedor("");
+          setComentario("");
+          setItems([{ sku: "", cantidad: 1, precio_venta: 0 }]);
+        }
+        onOpenChange(isOpen);
+      }}
+    >
       <DialogTrigger asChild>
         <Button className="btn-pill gap-2">
           <Plus className="w-4 h-4" />

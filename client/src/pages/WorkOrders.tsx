@@ -521,6 +521,48 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   };
 
   const onSubmit = (data: any) => {
+    // ✅ VALIDACIÓN 1: Datos del Cliente
+    if (!data.cliente_nombre || !data.cliente_nombre.trim()) {
+      toast({
+        title: "⚠️ Falta Información",
+        description: "El nombre del cliente es obligatorio.",
+        className: "bg-amber-50 text-amber-900 border-amber-200",
+        duration: 5000
+      });
+      return;
+    }
+
+    // ✅ VALIDACIÓN 2: Datos del Vehículo
+    if (!data.vehiculo_patente || !data.vehiculo_patente.trim()) {
+      toast({
+        title: "⚠️ Falta Información",
+        description: "La patente del vehículo es obligatoria.",
+        className: "bg-amber-50 text-amber-900 border-amber-200",
+        duration: 5000
+      });
+      return;
+    }
+
+    if (!data.vehiculo_marca || !data.vehiculo_marca.trim()) {
+      toast({
+        title: "⚠️ Falta Información",
+        description: "La marca del vehículo es obligatoria.",
+        className: "bg-amber-50 text-amber-900 border-amber-200",
+        duration: 5000
+      });
+      return;
+    }
+
+    if (!data.vehiculo_modelo || !data.vehiculo_modelo.trim()) {
+      toast({
+        title: "⚠️ Falta Información",
+        description: "El modelo del vehículo es obligatorio.",
+        className: "bg-amber-50 text-amber-900 border-amber-200",
+        duration: 5000
+      });
+      return;
+    }
+
     const serviciosItems = Object.entries(services)
       .filter(([_, s]) => s.checked)
       .map(([name, s]) => ({
@@ -539,16 +581,72 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
     
     const items = [...serviciosItems, ...productosItems];
 
+    // ✅ VALIDACIÓN 3: Al menos un servicio o repuesto
+    if (items.length === 0) {
+      toast({
+        title: "⚠️ Sin Servicios",
+        description: "Debe agregar al menos un servicio o repuesto a la orden.",
+        className: "bg-amber-50 text-amber-900 border-amber-200",
+        duration: 5000
+      });
+      return;
+    }
+
+    // ✅ VALIDACIÓN 4: Todos los servicios marcados deben tener precio > 0
+    const serviciosConPrecioCero = serviciosItems.filter(s => !s.precio || s.precio <= 0);
+    if (serviciosConPrecioCero.length > 0) {
+      toast({
+        title: "⚠️ Precios Incompletos",
+        description: `Hay ${serviciosConPrecioCero.length} servicio(s) sin precio. Complete todos los precios antes de continuar.`,
+        className: "bg-amber-50 text-amber-900 border-amber-200",
+        duration: 6000
+      });
+      return;
+    }
+
+    // ✅ VALIDACIÓN 5: Stock suficiente para productos seleccionados (CRÍTICO)
+    const stockErrors: string[] = [];
+    for (const prod of selectedProducts) {
+      if (prod.cantidad > prod.stock) {
+        stockErrors.push(`❌ ${prod.nombre}: solicitado ${prod.cantidad}, disponible ${prod.stock}`);
+      }
+    }
+
+    if (stockErrors.length > 0) {
+      toast({
+        title: "⚠️ STOCK INSUFICIENTE",
+        description: (
+          <div className="space-y-2 mt-2 text-white">
+            <p className="font-bold text-white">No se puede procesar la orden:</p>
+            <ul className="list-none space-y-1 text-sm">
+              {stockErrors.map((error, idx) => (
+                <li key={idx} className="text-white font-medium">{error}</li>
+              ))}
+            </ul>
+            <p className="text-xs text-white/90 mt-3 pt-2 border-t border-white/30">
+              Por favor, ajusta las cantidades antes de continuar.
+            </p>
+          </div>
+        ),
+        variant: "destructive",
+        duration: 8000,
+        className: "bg-red-600 border-red-700 text-white [&>div]:text-white"
+      });
+      return;
+    }
+
     createWorkOrder({
       numero_orden_papel: data.numero_orden_papel,
       realizado_por: data.realizado_por,
-      cliente: { 
-        nombre: data.cliente_nombre.trim(), 
+      // Solo enviar revisado_por si tiene contenido
+      ...(data.revisado_por?.trim() && { revisado_por: data.revisado_por.trim() }),
+      cliente: {
+        nombre: data.cliente_nombre.trim(),
         rut: data.cliente_rut.replace(/\./g, "").replace(/-/g, "").toUpperCase().trim(),
         // Solo enviar email si tiene contenido válido
         ...(data.cliente_email.trim() && { email: data.cliente_email.trim() }),
         // Solo enviar teléfono si tiene contenido válido (concatenar +56 9 con los 8 dígitos)
-        ...(data.cliente_telefono.trim() && { telefono: `56 9${data.cliente_telefono.trim()}` })
+        ...(data.cliente_telefono.trim() && { telefono: `+56 9${data.cliente_telefono.trim()}` })
       },
       vehiculo: { 
         patente: data.vehiculo_patente.replace(/-/g, "").toUpperCase().trim(),
@@ -874,8 +972,42 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isPending} className="bg-emerald-400 hover:bg-emerald-500 text-white">{isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creando...</> : "Crear Orden de Trabajo"}</Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  // Limpiar formulario
+                  form.reset();
+                  
+                  // Limpiar servicios marcados
+                  const cleanServices: any = {};
+                  servicesCatalog.forEach(s => { 
+                    cleanServices[s] = { checked: false, precio: 0, descripcion: "" }; 
+                  });
+                  setServices(cleanServices);
+                  
+                  // Limpiar productos seleccionados
+                  setSelectedProducts([]);
+                  
+                  // Cerrar modal
+                  onOpenChange(false);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isPending} className="bg-emerald-400 hover:bg-emerald-500 text-white gap-2">
+                {isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Crear Orden de Trabajo
+                  </>
+                )}
+              </Button>
             </div>
           </form>
         </Form>

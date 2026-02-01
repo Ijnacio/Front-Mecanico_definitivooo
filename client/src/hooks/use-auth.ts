@@ -131,13 +131,17 @@ export function useAuth() {
 
         // Incluso si falla el logout en el backend, limpiar localmente
         if (!response.ok) {
-          console.warn("Error en logout del servidor, limpiando sesión local");
+          if (import.meta.env.DEV) {
+            console.warn("Error en logout del servidor, limpiando sesión local");
+          }
         }
 
         return { success: true };
       } catch (error) {
         // Si hay error de red, igual limpiar sesión local
-        console.warn("Error de red en logout, limpiando sesión local");
+        if (import.meta.env.DEV) {
+          console.warn("Error de red en logout, limpiando sesión local");
+        }
         return { success: true };
       }
     },
