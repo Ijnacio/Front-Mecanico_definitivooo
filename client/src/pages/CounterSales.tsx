@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCounterSales } from "@/hooks/use-counter-sales";
 import { useProducts } from "@/hooks/use-products";
 import { Badge } from "@/components/ui/badge";
+import { ProductSearchDialog } from "@/components/products/ProductSearchDialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -576,6 +577,8 @@ function CreateCounterSaleDialog({ open, onOpenChange }: { open: boolean; onOpen
   const [tipoMovimiento, setTipoMovimiento] = useState<"VENTA" | "PERDIDA" | "USO_INTERNO">("VENTA");
   const [vendedor, setVendedor] = useState("");
   const [comentario, setComentario] = useState("");
+  const [productSearchOpen, setProductSearchOpen] = useState(false);
+  const [currentEditingIndex, setCurrentEditingIndex] = useState<number | null>(null);
   const [items, setItems] = useState<Array<{ sku: string; cantidad: number; precio_venta?: number }>>([
     { sku: "", cantidad: 1, precio_venta: 0 }
   ]);
@@ -608,6 +611,32 @@ function CreateCounterSaleDialog({ open, onOpenChange }: { open: boolean; onOpen
       precio_venta: precio
     };
     setItems(newItems);
+  };
+
+  const handleProductSelect = (product: any) => {
+    if (currentEditingIndex !== null) {
+      // Verificar si el producto ya existe en otra fila (evitar duplicados)
+      const existingIndex = items.findIndex((item, idx) => 
+        item.sku === product.sku && idx !== currentEditingIndex
+      );
+
+      if (existingIndex !== -1) {
+        // El producto ya existe, mostrar alerta y no permitir selección
+        toast({
+          title: "⚠️ Producto duplicado",
+          description: `"${product.nombre}" ya está en la fila ${existingIndex + 1}. Modifica la cantidad en esa fila en lugar de agregarlo nuevamente.`,
+          variant: "destructive",
+          duration: 5000,
+          className: "bg-orange-600 border-orange-700 text-white [&>div]:text-white"
+        });
+        setCurrentEditingIndex(null);
+        return; // No hacer nada
+      }
+
+      // Si no existe, actualizar normalmente
+      updateItemSku(currentEditingIndex, product.sku, product.precio_venta);
+      setCurrentEditingIndex(null);
+    }
   };
 
   const calcularTotal = () => {
@@ -802,10 +831,34 @@ function CreateCounterSaleDialog({ open, onOpenChange }: { open: boolean; onOpen
                   {items.map((item, index) => (
                     <TableRow key={index} className="hover:bg-slate-50/50 group border-slate-100">
                       <TableCell className="pl-6 py-3 align-top">
-                        <ProductSelector
-                          value={item.sku}
-                          onChange={(sku, precio) => updateItemSku(index, sku, precio)}
-                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setCurrentEditingIndex(index);
+                            setProductSearchOpen(true);
+                          }}
+                          className={cn(
+                            "w-full justify-between h-9 px-3 font-normal text-left border-slate-200 bg-white hover:bg-slate-50 transition-all",
+                            !item.sku && "text-muted-foreground"
+                          )}
+                        >
+                          {item.sku ? (
+                            <span className="truncate flex items-center gap-2 text-slate-900">
+                              <Box className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="font-medium">
+                                {allProducts.find(p => p.sku === item.sku)?.nombre || item.sku}
+                              </span>
+                              <span className="text-slate-400 text-xs hidden sm:inline-block">| {item.sku}</span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-2 text-slate-400">
+                              <Search className="w-3.5 h-3.5" />
+                              Buscar producto...
+                            </span>
+                          )}
+                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-40" />
+                        </Button>
                       </TableCell>
                       <TableCell className="py-3 align-top">
                         <Input
@@ -925,6 +978,18 @@ function CreateCounterSaleDialog({ open, onOpenChange }: { open: boolean; onOpen
 
         </div>
       </DialogContent>
+
+      {/* ProductSearchDialog para seleccionar productos */}
+      <ProductSearchDialog
+        open={productSearchOpen}
+        onClose={() => {
+          setProductSearchOpen(false);
+          setCurrentEditingIndex(null);
+        }}
+        onSelect={handleProductSelect}
+        title="🔍 Seleccionar Producto"
+        showOutOfStock={false}
+      />
     </Dialog>
   );
 }
