@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProducts } from "@/hooks/use-products";
 import { useCategories } from "@/hooks/use-categories";
-import { Search, Package, AlertCircle } from "lucide-react";
+import { Search, Package, AlertCircle, Circle, XCircle } from "lucide-react";
 
 interface ProductSearchDialogProps {
   open: boolean;
@@ -118,7 +118,12 @@ export function ProductSearchDialog({
             {/* Filtro de Stock (solo si showOutOfStock es true) */}
             {showOutOfStock && (
               <Select value={stockFilter} onValueChange={(v: any) => setStockFilter(v)}>
-                <SelectTrigger className="h-10 w-full md:w-[200px] bg-green-50 border-green-300 border-dashed flex items-center hover:bg-green-100 transition-colors">
+                <SelectTrigger className={`h-10 w-full md:w-[200px] border-dashed flex items-center transition-colors ${
+                  stockFilter === 'in-stock' ? 'bg-emerald-50 border-emerald-300 hover:bg-emerald-100' :
+                  stockFilter === 'low' ? 'bg-orange-50 border-orange-300 hover:bg-orange-100' :
+                  stockFilter === 'out-stock' ? 'bg-red-50 border-red-300 hover:bg-red-100' :
+                  'bg-slate-50 border-slate-300 hover:bg-slate-100'
+                }`}>
                   <SelectValue placeholder="Estado Stock" />
                 </SelectTrigger>
                 <SelectContent>
@@ -126,13 +131,22 @@ export function ProductSearchDialog({
                     Todos ({allProducts.length})
                   </SelectItem>
                   <SelectItem value="in-stock" className="text-emerald-600 font-medium">
-                    Con Stock ({inStockCount})
+                    <div className="flex items-center gap-2">
+                      <Circle className="w-3 h-3 fill-emerald-500 text-emerald-500" />
+                      Con Stock ({inStockCount})
+                    </div>
                   </SelectItem>
-                  <SelectItem value="low" className="text-orange-600 font-medium">
-                    ⚠️ Bajo Stock ({lowStockCount})
+                  <SelectItem value="low" className="text-orange-500 font-medium">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-3 h-3" />
+                      Bajo Stock ({lowStockCount})
+                    </div>
                   </SelectItem>
                   <SelectItem value="out-stock" className="text-red-600 font-medium">
-                    ❌ Sin Stock ({outOfStockCount})
+                    <div className="flex items-center gap-2">
+                      <XCircle className="w-3 h-3" />
+                      Sin Stock ({outOfStockCount})
+                    </div>
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -149,6 +163,7 @@ export function ProductSearchDialog({
             ) : (
               filteredProducts.map((product: any) => {
                 const outOfStock = product.stock_actual === 0;
+                const lowStock = product.stock_actual > 0 && product.stock_actual <= product.stock_minimo;
                 
                 return (
                   <button
@@ -158,11 +173,7 @@ export function ProductSearchDialog({
                       onSelect(product);
                       onClose();
                     }}
-                    className={`w-full p-3 text-left border rounded-lg transition-all ${
-                      outOfStock 
-                        ? 'border-red-200 bg-red-50/30 hover:bg-red-50 hover:border-red-300' 
-                        : 'border-blue-200 bg-white hover:bg-blue-50 hover:border-blue-400'
-                    }`}
+                    className="w-full p-3 text-left border rounded-lg transition-all border-blue-200 bg-white hover:bg-blue-50 hover:border-blue-400"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -172,8 +183,14 @@ export function ProductSearchDialog({
                           </p>
                           {outOfStock && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">
-                              <AlertCircle className="w-3 h-3" />
+                              <XCircle className="w-3 h-3" />
                               SIN STOCK
+                            </span>
+                          )}
+                          {lowStock && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-bold rounded-full">
+                              <AlertCircle className="w-3 h-3" />
+                              BAJO STOCK
                             </span>
                           )}
                         </div>

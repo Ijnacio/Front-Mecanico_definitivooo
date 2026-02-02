@@ -16,7 +16,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useForm } from "react-hook-form";
 import { VehicleModelMultiSelect } from "@/components/VehicleModelMultiSelect";
-import { Loader2, DollarSign, Filter, RefreshCcw, Search, Plus, ChevronDown } from "lucide-react";
+import { Loader2, DollarSign, Filter, RefreshCcw, Search, Plus, ChevronDown, AlertCircle, XCircle } from "lucide-react";
 import type { VehicleModel } from "@/hooks/use-vehicle-models";
 import {
   useReactTable,
@@ -199,8 +199,18 @@ export default function Inventory() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los Estados</SelectItem>
-                <SelectItem value="low" className="text-orange-600 font-medium">Bajo Stock</SelectItem>
-                <SelectItem value="out" className="text-red-600 font-medium">Agotado</SelectItem>
+                <SelectItem value="low" className="text-orange-600 font-medium">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-3 h-3" />
+                    Bajo Stock
+                  </div>
+                </SelectItem>
+                <SelectItem value="out" className="text-red-600 font-medium">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-3 h-3" />
+                    Agotado
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
 

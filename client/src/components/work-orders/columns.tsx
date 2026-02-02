@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Eye, Car, ArrowUpDown } from "lucide-react"
 import { WorkOrder } from "@/hooks/use-work-orders"
+import { formatRutCL } from "@/lib/utils"
 
 export const createColumns = (
     onView: (wo: WorkOrder) => void
@@ -40,7 +41,7 @@ export const createColumns = (
             cell: ({ row }) => (
                 <div className="flex flex-col">
                     <span className="font-medium text-slate-900">{row.original.cliente?.nombre || "N/A"}</span>
-                    <span className="text-xs text-slate-500">{row.original.cliente?.rut || "Sin RUT"}</span>
+                    <span className="text-xs text-slate-500 font-mono">{row.original.cliente?.rut ? formatRutCL(row.original.cliente.rut) : "Sin RUT"}</span>
                 </div>
             ),
         },

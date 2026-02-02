@@ -430,9 +430,9 @@ export default function CreatePurchase() {
                           <TableRow key={field.id} className="hover:bg-slate-50/50">
                             <TableCell>
                               <Input
-                                {...form.register(`items.${index}.sku`)}
-                                className="h-8 text-xs font-mono bg-white uppercase"
-                                placeholder="SKU"
+                                value={form.watch(`items.${index}.sku`) || ""}
+                                className="h-8 text-xs font-mono bg-slate-50 cursor-not-allowed uppercase"
+                                placeholder="Usar buscador arriba"
                                 readOnly
                               />
                             </TableCell>

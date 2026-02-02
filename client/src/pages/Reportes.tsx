@@ -33,6 +33,7 @@ export default function Reportes() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   const { data: lowStockReport, isLoading: loadingStock } = useLowStockReport();
   const { data: cashReport, isLoading: loadingCash } = useDailyCashReport(selectedDate || undefined);
@@ -157,7 +158,7 @@ export default function Reportes() {
 
           {/* Selector de Fecha con Popover */}
           <div className="flex items-center gap-2">
-            <Popover>
+            <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -187,6 +188,7 @@ export default function Reportes() {
                     if (date) {
                       const formatted = date.toISOString().split('T')[0];
                       setSelectedDate(formatted);
+                      setDatePopoverOpen(false);
                     }
                   }}
                   disabled={(date) => date > new Date()}

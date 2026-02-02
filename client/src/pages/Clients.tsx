@@ -712,9 +712,10 @@ function EditClientDialog({
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="998877111"
+                      placeholder="12.345.678-9"
                       disabled
                       className="bg-slate-50 cursor-not-allowed"
+                      maxLength={12}
                     />
                   </FormControl>
                   <FormMessage />

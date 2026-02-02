@@ -70,6 +70,7 @@ export default function Login() {
                 required
                 disabled={isLoggingIn}
                 className="text-base"
+                maxLength={12}
               />
             </div>
             

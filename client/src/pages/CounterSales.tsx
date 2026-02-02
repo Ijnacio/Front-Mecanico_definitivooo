@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Search, Loader2, ShoppingCart, Check, ChevronsUpDown, Eye, Trash2, Box, Calendar as CalendarIcon, ChevronDown, Filter } from "lucide-react";
+import { Plus, Search, Loader2, ShoppingCart, Check, ChevronsUpDown, Eye, Trash2, Box, Calendar as CalendarIcon, ChevronDown, Filter, Circle, AlertCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCounterSales } from "@/hooks/use-counter-sales";
@@ -34,6 +34,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 export default function CounterSales() {
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<"VENTA" | "PERDIDA" | "USO_INTERNO" | "all">("all");
   const { sales: allSales = [], isLoading } = useCounterSales();
 
@@ -189,7 +190,7 @@ export default function CounterSales() {
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
 
             {/* Filtro Fecha (Estilo Reportes) */}
-            <Popover>
+            <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -217,9 +218,9 @@ export default function CounterSales() {
                   locale={es}
                   onSelect={(date) => {
                     if (date) {
-                      const offset = date.getTimezoneOffset();
-                      const localDate = new Date(date.getTime() - (offset * 60 * 1000));
-                      setDateFilter(localDate.toISOString().split('T')[0]);
+                      const formatted = date.toISOString().split('T')[0];
+                      setDateFilter(formatted);
+                      setDatePopoverOpen(false);
                     } else {
                       setDateFilter("");
                     }
@@ -488,9 +489,24 @@ function ProductSelector({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los productos</SelectItem>
-                <SelectItem value="in-stock" className="text-emerald-600 font-medium">Con Stock Normal</SelectItem>
-                <SelectItem value="low" className="text-orange-600 font-medium">⚠️ Bajo Stock</SelectItem>
-                <SelectItem value="out" className="text-red-600 font-medium">❌ Agotado</SelectItem>
+                <SelectItem value="in-stock" className="text-emerald-600 font-medium">
+                  <div className="flex items-center gap-2">
+                    <Circle className="w-3 h-3 fill-emerald-500 text-emerald-500" />
+                    Con Stock Normal
+                  </div>
+                </SelectItem>
+                <SelectItem value="low" className="text-orange-600 font-medium">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-3 h-3" />
+                    Bajo Stock
+                  </div>
+                </SelectItem>
+                <SelectItem value="out" className="text-red-600 font-medium">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-3 h-3" />
+                    Agotado
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -772,7 +788,7 @@ function CreateCounterSaleDialog({ open, onOpenChange }: { open: boolean; onOpen
       </DialogTrigger>
       <DialogContent className="max-w-[85vw] w-full h-[80vh] p-0 gap-0 overflow-hidden flex flex-col bg-slate-50">
         {/* Header */}
-        <div className="bg-white border-b px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="bg-white border-b px-6 py-4 pr-16 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <div>
               <DialogTitle className="text-xl font-bold text-slate-900">Nueva Venta / Movimiento</DialogTitle>
@@ -780,7 +796,7 @@ function CreateCounterSaleDialog({ open, onOpenChange }: { open: boolean; onOpen
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+            <div className="flex items-center gap-3 bg-slate-100 p-1.5 rounded-lg">
               <Button
                 size="sm"
                 variant={tipoMovimiento === "VENTA" ? "outline" : "ghost"}
