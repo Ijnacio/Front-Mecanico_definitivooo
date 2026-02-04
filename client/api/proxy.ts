@@ -1,29 +1,36 @@
+// api/proxy.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse
-) {
-  try {
-    const url = `${process.env.BACKEND_URL}${req.url?.replace("/api/proxy", "") || ""}`;
+const BACKEND_URL = process.env.VITE_API_URL; // <-- tu variable de entorno
 
-    const response = await fetch(url, {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    const path = req.url?.replace(/^\/api\/proxy/, "") || "";
+    const url = `${BACKEND_URL}${path}`;
+
+    const fetchOptions: RequestInit = {
       method: req.method,
       headers: {
         "Content-Type": "application/json",
-        ...(req.headers.authorization && {
-          Authorization: req.headers.authorization,
-        }),
+        ...(req.headers.authorization && { Authorization: req.headers.authorization }),
       },
-      body:
-        req.method !== "GET" && req.method !== "HEAD"
-          ? JSON.stringify(req.body)
-          : undefined,
+    };
+
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      fetchOptions.body = JSON.stringify(req.body);
+    }
+
+    const response = await fetch(url, fetchOptions);
+
+    res.status(response.status);
+    response.headers.forEach((value, key) => {
+      if (key.toLowerCase() !== "transfer-encoding") res.setHeader(key, value);
     });
 
-    const data = await response.text();
-    res.status(response.status).send(data);
+    const text = await response.text();
+    res.send(text);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Error conectando al backend" });
   }
 }
