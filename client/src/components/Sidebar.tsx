@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Package, ShoppingCart, ClipboardList, Wrench, Menu, LogOut, User, Edit2, LayoutDashboard, Users, TrendingUp } from "lucide-react";
+import { Package, ShoppingCart, ClipboardList, Wrench, Menu, LogOut, User, Edit2, LayoutDashboard, Users, TrendingUp, Shield, Key, Trash2, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
@@ -8,9 +8,11 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useUpdateUser } from "@/hooks/use-users";
+import { useUpdateUser, useUsers, useDeleteUser } from "@/hooks/use-users";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 const allLinks = [
   { href: "/reportes", label: "Reportes", icon: LayoutDashboard, roles: ["ADMIN"] },
@@ -25,9 +27,13 @@ export function Sidebar() {
   const [location, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ rut: "", nombre: "" });
+  const [editForm, setEditForm] = useState({ nombre: "", newPassword: "", confirmPassword: "" });
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editUserForm, setEditUserForm] = useState({ rut: "", newPassword: "" });
   const { user, logout } = useAuth();
   const updateUser = useUpdateUser();
+  const { data: users = [] } = useUsers();
+  const deleteUser = useDeleteUser();
   const { toast } = useToast();
   
   // Filtrar links según el rol del usuario
@@ -36,20 +42,42 @@ export function Sidebar() {
     link.roles.includes(userRole)
   );
 
+  const isAdmin = user?.role === "ADMIN" || user?.role === "administrador";
+
   const handleOpenEditProfile = () => {
-    setEditForm({ rut: user?.rut || "", nombre: user?.nombre || "" });
+    setEditForm({ nombre: user?.nombre || "", newPassword: "", confirmPassword: "" });
     setEditProfileOpen(true);
   };
 
   const handleSaveProfile = async () => {
     if (!user?.id) return;
 
+    // Validar contraseña si se está cambiando
+    if (editForm.newPassword) {
+      if (editForm.newPassword.length < 6) {
+        toast({
+          title: "Error",
+          description: "La contraseña debe tener al menos 6 caracteres",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (editForm.newPassword !== editForm.confirmPassword) {
+        toast({
+          title: "Error",
+          description: "Las contraseñas no coinciden",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     try {
       await updateUser.mutateAsync({
         id: user.id,
         data: {
-          rut: editForm.rut,
           nombre: editForm.nombre,
+          newPassword: editForm.newPassword || undefined,
         },
       });
 
@@ -59,11 +87,63 @@ export function Sidebar() {
       });
 
       setEditProfileOpen(false);
-      window.location.reload(); // Recargar para actualizar el usuario en el contexto
+      setEditForm({ nombre: "", newPassword: "", confirmPassword: "" });
+      window.location.reload();
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "No se pudo actualizar el perfil",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditUser = (targetUser: any) => {
+    setEditingUser(targetUser);
+    setEditUserForm({ rut: targetUser.rut, newPassword: "" });
+  };
+
+  const handleSaveUserEdit = async () => {
+    if (!editingUser) return;
+
+    try {
+      await updateUser.mutateAsync({
+        id: editingUser.id,
+        data: {
+          rut: editUserForm.rut,
+          newPassword: editUserForm.newPassword || undefined,
+        },
+      });
+
+      toast({
+        title: "✅ Usuario actualizado",
+        description: "Las credenciales han sido actualizadas",
+      });
+
+      setEditingUser(null);
+      setEditUserForm({ rut: "", newPassword: "" });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo actualizar el usuario",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteUser = async (id: string, nombre: string) => {
+    if (!confirm(`¿Estás seguro de desactivar al usuario ${nombre}?`)) return;
+
+    try {
+      await deleteUser.mutateAsync(id);
+      toast({
+        title: "✅ Usuario desactivado",
+        description: `${nombre} ha sido desactivado correctamente",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo desactivar el usuario",
         variant: "destructive",
       });
     }
@@ -144,100 +224,6 @@ export function Sidebar() {
         </Button>
       </div>
 
-      {/* Modal de Edición de Perfil */}
-      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              Editar Mi Perfil
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-nombre">Nombre Completo</Label>
-              <Input
-                id="edit-nombre"
-                value={editForm.nombre}
-                onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
-                placeholder="Juan Pérez"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="edit-rut">RUT</Label>
-              <Input
-                id="edit-rut"
-                value={user?.rut || ""}
-                disabled
-                className="bg-slate-50 cursor-not-allowed"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                El RUT no se puede modificar
-              </p>
-            </div>
-
-            <div className="border-t pt-4">
-              <p className="text-sm font-medium mb-3">Cambiar Contraseña (Opcional)</p>
-              
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="edit-password">Nueva Contraseña</Label>
-                  <Input
-                    id="edit-password"
-                    type="password"
-                    value={editForm.newPassword}
-                    onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
-                    placeholder="Mínimo 6 caracteres"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="edit-confirm-password">Confirmar Contraseña</Label>
-                  <Input
-                    id="edit-confirm-password"
-                    type="password"
-                    value={editForm.confirmPassword}
-                    onChange={(e) => setEditForm({ ...editForm, confirmPassword: e.target.value })}
-                    placeholder="Repetir contraseña"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setEditModalOpen(false)}
-              >
-                <X className="w-4 h-4 mr-1" />
-                Cancelar
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={handleSaveProfile}
-                disabled={updateUser.isPending}
-              >
-                <Save className="w-4 h-4 mr-1" />
-                {updateUser.isPending ? "Guardando..." : "Guardar"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-
-  return (
-    <>
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="shadow-md bg-white">
-              <Menu className="w-5 h-5" />
-            </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-80 border-r-0">
             <NavContent />
@@ -249,39 +235,205 @@ export function Sidebar() {
         <NavContent />
       </aside>
 
-      {/* Modal de Edición de Perfil */}
+      {/* Modal de Perfil y Gestión */}
       <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="w-5 h-5 text-primary" />
-              Editar Mi Perfil
+              Mi Perfil
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre Completo</Label>
+
+          <Tabs defaultValue="profile" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="profile">Información Personal</TabsTrigger>
+              {isAdmin && <TabsTrigger value="users">Gestión de Usuarios</TabsTrigger>}
+            </TabsList>
+
+            {/* Tab: Información Personal */}
+            <TabsContent value="profile" className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="nombre">Nombre Completo</Label>
+                  <Input
+                    id="nombre"
+                    value={editForm.nombre}
+                    onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
+                    placeholder="Nombre completo"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="rut">RUT</Label>
+                  <Input
+                    id="rut"
+                    value={user?.rut || ""}
+                    disabled={isAdmin}
+                    className={isAdmin ? "bg-slate-50 cursor-not-allowed" : ""}
+                  />
+                  {isAdmin && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <Shield className="w-3 h-3 inline mr-1" />
+                      El RUT está bloqueado para administradores
+                    </p>
+                  )}
+                </div>
+
+                <div className="border-t pt-4">
+                  <p className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <Key className="w-4 h-4" />
+                    Cambiar Contraseña (Opcional)
+                  </p>
+
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="newPassword">Nueva Contraseña</Label>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        value={editForm.newPassword}
+                        onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
+                        placeholder="Mínimo 6 caracteres"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={editForm.confirmPassword}
+                        onChange={(e) => setEditForm({ ...editForm, confirmPassword: e.target.value })}
+                        placeholder="Repetir contraseña"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setEditProfileOpen(false);
+                      setEditForm({ nombre: "", newPassword: "", confirmPassword: "" });
+                    }}
+                  >
+                    <X className="w-4 h-4 mr-1" />
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleSaveProfile}
+                    disabled={updateUser.isPending}
+                  >
+                    <Save className="w-4 h-4 mr-1" />
+                    {updateUser.isPending ? "Guardando..." : "Guardar Cambios"}
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Tab: Gestión de Usuarios (Solo ADMIN) */}
+            {isAdmin && (
+              <TabsContent value="users" className="space-y-4">
+                <div className="rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>RUT</TableHead>
+                        <TableHead>Rol</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((u: any) => (
+                        <TableRow key={u.id}>
+                          <TableCell className="font-medium">{u.nombre}</TableCell>
+                          <TableCell>{u.rut}</TableCell>
+                          <TableCell>
+                            <Badge variant={u.role === "ADMIN" ? "default" : "secondary"}>
+                              {u.role === "ADMIN" ? "Administrador" : "Trabajador"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditUser(u)}
+                            >
+                              <Edit2 className="w-4 h-4 mr-1" />
+                              Editar
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteUser(u.id, u.nombre)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            )}
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edición de Usuario (ADMIN) */}
+      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5" />
+              Editar Credenciales: {editingUser?.nombre}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-user-rut">RUT</Label>
               <Input
-                id="nombre"
-                value={editForm.nombre}
-                onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
-                placeholder="Nombre completo"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="rut">RUT</Label>
-              <Input
-                id="rut"
-                value={editForm.rut}
-                onChange={(e) => setEditForm({ ...editForm, rut: e.target.value })}
+                id="edit-user-rut"
+                value={editUserForm.rut}
+                onChange={(e) => setEditUserForm({ ...editUserForm, rut: e.target.value })}
                 placeholder="12.345.678-9"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setEditProfileOpen(false)}>
+
+            <div>
+              <Label htmlFor="edit-user-password">Nueva Contraseña (Opcional)</Label>
+              <Input
+                id="edit-user-password"
+                type="password"
+                value={editUserForm.newPassword}
+                onChange={(e) => setEditUserForm({ ...editUserForm, newPassword: e.target.value })}
+                placeholder="Dejar vacío para no cambiar"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setEditingUser(null);
+                  setEditUserForm({ rut: "", newPassword: "" });
+                }}
+              >
                 Cancelar
               </Button>
-              <Button onClick={handleSaveProfile} disabled={updateUser.isPending}>
+              <Button
+                className="flex-1"
+                onClick={handleSaveUserEdit}
+                disabled={updateUser.isPending}
+              >
                 {updateUser.isPending ? "Guardando..." : "Guardar Cambios"}
               </Button>
             </div>

@@ -14,6 +14,12 @@ interface ChangePasswordDTO {
   newPassword: string;
 }
 
+interface UpdateUserDTO {
+  nombre?: string;
+  rut?: string;
+  newPassword?: string;
+}
+
 /**
  * Hook para listar todos los usuarios (solo ADMIN)
  */
@@ -58,6 +64,34 @@ export function useChangePassword() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+}
+
+/**
+ * Hook para actualizar un usuario (solo ADMIN para otros, cualquiera para sí mismo)
+ */
+export function useUpdateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateUserDTO }) => {
+      const response = await fetch(getApiUrl(`/users/${id}`), {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Error al actualizar usuario");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
     },
   });
 }
