@@ -223,7 +223,17 @@ export function Sidebar() {
           Cerrar Sesión
         </Button>
       </div>
+    </div>
+  );
 
+  return (
+    <>
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="shadow-md bg-white">
+              <Menu className="w-5 h-5" />
+            </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-80 border-r-0">
             <NavContent />
