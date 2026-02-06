@@ -314,7 +314,8 @@ export function Sidebar() {
                   </div>
                 </div>
 
-                {/* Card: Seguridad */}
+                {/* Card: Seguridad - SOLO ADMIN */}
+                {isAdmin && (
                 <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5 h-[240px] flex flex-col">
                   <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
                     <Key className="w-4 h-4 text-primary" />
@@ -347,8 +348,9 @@ export function Sidebar() {
                     </div>
                   </div>
                 </div>
+                )}
 
-                {/* Botones de AcciÃ³n */}
+                {/* Botones de Acción */}
                 <div className="flex gap-3 pt-2">
                   <Button
                     variant="outline"
