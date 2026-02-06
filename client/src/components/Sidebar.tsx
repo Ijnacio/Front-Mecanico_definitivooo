@@ -82,7 +82,7 @@ export function Sidebar() {
       });
 
       toast({
-        title: "âœ… Perfil actualizado",
+        title: "✅ Perfil actualizado",
         description: "Tus datos han sido actualizados correctamente",
       });
 
@@ -116,7 +116,7 @@ export function Sidebar() {
       });
 
       toast({
-        title: "âœ… Usuario actualizado",
+        title: "✅ Usuario actualizado",
         description: "Las credenciales han sido actualizadas",
       });
 
@@ -137,7 +137,7 @@ export function Sidebar() {
     try {
       await deleteUser.mutateAsync(id);
       toast({
-        title: "âœ… Usuario desactivado",
+        title: "✅ Usuario desactivado",
         description: `${nombre} ha sido desactivado correctamente`,
       });
     } catch (error: any) {
@@ -261,14 +261,14 @@ export function Sidebar() {
                 value="profile" 
                 className="font-semibold data-[state=active]:bg-slate-200 data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=inactive]:text-slate-600 data-[state=inactive]:bg-transparent transition-all"
               >
-                InformaciÃ³n Personal
+                Información Personal
               </TabsTrigger>
               {isAdmin && (
                 <TabsTrigger 
                   value="users" 
                   className="font-semibold data-[state=active]:bg-slate-200 data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=inactive]:text-slate-600 data-[state=inactive]:bg-transparent transition-all"
                 >
-                  GestiÃ³n de Usuarios
+                  Gestión de Usuarios
                 </TabsTrigger>
               )}
             </TabsList>
@@ -277,12 +277,12 @@ export function Sidebar() {
             <TabsContent value="profile" className="flex-1 overflow-y-auto pr-2">
               <div className="space-y-4">
                 {/* Card: Datos Personales */}
-                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5">
+                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5 min-h-[280px] flex flex-col">
                   <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
                     <User className="w-4 h-4 text-primary" />
                     Datos Personales
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-4 flex-1">
                     <div>
                       <Label htmlFor="nombre" className="font-semibold text-slate-800">Nombre Completo</Label>
                       <Input
@@ -300,12 +300,14 @@ export function Sidebar() {
                         id="rut"
                         value={user?.rut || ""}
                         disabled={isAdmin}
+                        placeholder="12.345.678-9"
+                        maxLength={12}
                         className={isAdmin ? "mt-1.5 bg-slate-100 border-slate-300 cursor-not-allowed text-slate-500" : "mt-1.5 bg-white border-slate-300"}
                       />
                       {isAdmin && (
                         <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
                           <Shield className="w-3.5 h-3.5 text-amber-600" />
-                          <span className="font-medium">El RUT estÃ¡ bloqueado para administradores por seguridad</span>
+                          <span className="font-medium">El RUT está bloqueado para administradores por seguridad</span>
                         </p>
                       )}
                     </div>
@@ -313,33 +315,33 @@ export function Sidebar() {
                 </div>
 
                 {/* Card: Seguridad */}
-                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5">
+                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5 min-h-[280px] flex flex-col">
                   <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
                     <Key className="w-4 h-4 text-primary" />
-                    Cambiar ContraseÃ±a (Opcional)
+                    Cambiar Contraseña (Opcional)
                   </h3>
 
-                  <div className="space-y-4">
+                  <div className="space-y-4 flex-1">
                     <div>
-                      <Label htmlFor="newPassword" className="font-semibold text-slate-800">Nueva ContraseÃ±a</Label>
+                      <Label htmlFor="newPassword" className="font-semibold text-slate-800">Nueva Contraseña</Label>
                       <Input
                         id="newPassword"
                         type="password"
                         value={editForm.newPassword}
                         onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
-                        placeholder="MÃ­nimo 6 caracteres"
+                        placeholder="Mínimo 6 caracteres"
                         className="mt-1.5 bg-white border-slate-300 focus:border-primary"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="confirmPassword" className="font-semibold text-slate-800">Confirmar ContraseÃ±a</Label>
+                      <Label htmlFor="confirmPassword" className="font-semibold text-slate-800">Confirmar Contraseña</Label>
                       <Input
                         id="confirmPassword"
                         type="password"
                         value={editForm.confirmPassword}
                         onChange={(e) => setEditForm({ ...editForm, confirmPassword: e.target.value })}
-                        placeholder="Repetir contraseÃ±a"
+                        placeholder="Repite la contraseña"
                         className="mt-1.5 bg-white border-slate-300 focus:border-primary"
                       />
                     </div>
@@ -450,21 +452,22 @@ export function Sidebar() {
                   value={editUserForm.rut}
                   onChange={(e) => setEditUserForm({ ...editUserForm, rut: e.target.value })}
                   placeholder="12.345.678-9"
+                  maxLength={12}
                   className="mt-1.5 bg-white border-slate-300 focus:border-primary"
                 />
               </div>
 
               <div>
-                <Label htmlFor="edit-user-password" className="font-semibold text-slate-700">Nueva ContraseÃ±a (Opcional)</Label>
+                <Label htmlFor="edit-user-password" className="font-semibold text-slate-700">Nueva Contraseña (Opcional)</Label>
                 <Input
                   id="edit-user-password"
                   type="password"
                   value={editUserForm.newPassword}
                   onChange={(e) => setEditUserForm({ ...editUserForm, newPassword: e.target.value })}
-                  placeholder="Dejar vacÃ­o para no cambiar"
+                  placeholder="Dejar vacío para no cambiar"
                   className="mt-1.5 bg-white border-slate-300 focus:border-primary"
                 />
-                <p className="text-xs text-slate-500 mt-1.5">MÃ­nimo 6 caracteres si deseas cambiarla</p>
+                <p className="text-xs text-slate-500 mt-1.5">Mínimo 6 caracteres si deseas cambiarla</p>
               </div>
             </div>
 
