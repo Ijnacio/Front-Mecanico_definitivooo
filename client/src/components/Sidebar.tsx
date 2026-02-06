@@ -247,124 +247,130 @@ export function Sidebar() {
 
       {/* Modal de Perfil y Gestión */}
       <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-hidden bg-slate-50">
+          <DialogHeader className="border-b pb-4 bg-white -mx-6 -mt-6 px-6 pt-6">
+            <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
+              <User className="w-6 h-6 text-primary" />
               Mi Perfil
             </DialogTitle>
           </DialogHeader>
 
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="profile">Información Personal</TabsTrigger>
-              {isAdmin && <TabsTrigger value="users">Gestión de Usuarios</TabsTrigger>}
+            <TabsList className="grid w-full grid-cols-2 bg-white border">
+              <TabsTrigger value="profile" className="font-semibold">Información Personal</TabsTrigger>
+              {isAdmin && <TabsTrigger value="users" className="font-semibold">Gestión de Usuarios</TabsTrigger>}
             </TabsList>
 
             {/* Tab: Información Personal */}
-            <TabsContent value="profile" className="space-y-4">
+            <TabsContent value="profile" className="min-h-[400px] overflow-y-auto max-h-[60vh] pr-2">
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="nombre">Nombre Completo</Label>
-                  <Input
-                    id="nombre"
-                    value={editForm.nombre}
-                    onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
-                    placeholder="Nombre completo"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="rut">RUT</Label>
-                  <Input
-                    id="rut"
-                    value={user?.rut || ""}
-                    disabled={isAdmin}
-                    className={isAdmin ? "bg-slate-50 cursor-not-allowed" : ""}
-                  />
-                  {isAdmin && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      <Shield className="w-3 h-3 inline mr-1" />
-                      El RUT está bloqueado para administradores
-                    </p>
-                  )}
-                </div>
-
-                <div className="border-t pt-4">
-                  <p className="text-sm font-medium mb-3 flex items-center gap-2">
-                    <Key className="w-4 h-4" />
-                    Cambiar Contraseña (Opcional)
-                  </p>
-
-                  <div className="space-y-3">
+                {/* Card: Datos Personales */}
+                <div className="bg-white rounded-lg border border-slate-200 shadow-md p-5">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                    <User className="w-4 h-4 text-primary" />
+                    Datos Personales
+                  </h3>
+                  <div className="space-y-4">
                     <div>
-                      <Label htmlFor="newPassword">Nueva Contraseña</Label>
+                      <Label htmlFor="nombre" className="font-semibold text-slate-700">Nombre Completo</Label>
+                      <Input
+                        id="nombre"
+                        value={editForm.nombre}
+                        onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
+                        placeholder="Nombre completo"
+                        className="mt-1.5 bg-white border-slate-300 focus:border-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="rut" className="font-semibold text-slate-700">RUT</Label>
+                      <Input
+                        id="rut"
+                        value={user?.rut || ""}
+                        disabled={isAdmin}
+                        className={isAdmin ? "mt-1.5 bg-slate-100 border-slate-300 cursor-not-allowed text-slate-500" : "mt-1.5 bg-white border-slate-300"}
+                      />
+                      {isAdmin && (
+                        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                          <Shield className="w-3.5 h-3.5 text-amber-600" />
+                          <span className="font-medium">El RUT está bloqueado para administradores por seguridad</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card: Seguridad */}
+                <div className="bg-white rounded-lg border border-slate-200 shadow-md p-5">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                    <Key className="w-4 h-4 text-primary" />
+                    Cambiar Contraseña (Opcional)
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="newPassword" className="font-semibold text-slate-700">Nueva Contraseña</Label>
                       <Input
                         id="newPassword"
                         type="password"
                         value={editForm.newPassword}
                         onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
                         placeholder="Mínimo 6 caracteres"
+                        className="mt-1.5 bg-white border-slate-300 focus:border-primary"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+                      <Label htmlFor="confirmPassword" className="font-semibold text-slate-700">Confirmar Contraseña</Label>
                       <Input
                         id="confirmPassword"
                         type="password"
                         value={editForm.confirmPassword}
                         onChange={(e) => setEditForm({ ...editForm, confirmPassword: e.target.value })}
                         placeholder="Repetir contraseña"
+                        className="mt-1.5 bg-white border-slate-300 focus:border-primary"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-4">
+                {/* Botones de Acción */}
+                <div className="flex gap-3 pt-2">
                   <Button
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 border-slate-300 hover:bg-slate-100"
                     onClick={() => {
                       setEditProfileOpen(false);
                       setEditForm({ nombre: "", newPassword: "", confirmPassword: "" });
                     }}
                   >
-                    <X className="w-4 h-4 mr-1" />
+                    <X className="w-4 h-4 mr-2" />
                     Cancelar
                   </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={handleSaveProfile}
-                    disabled={updateUser.isPending}
-                  >
-                    <Save className="w-4 h-4 mr-1" />
-                    {updateUser.isPending ? "Guardando..." : "Guardar Cambios"}
-                  </Button>
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* Tab: Gestión de Usuarios (Solo ADMIN) */}
-            {isAdmin && (
-              <TabsContent value="users" className="space-y-4">
-                <div className="rounded-lg border">
+                  <Buttonmin-h-[400px] overflow-y-auto max-h-[60vh] pr-2">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-md overflow-hidden">
+                  <div className="px-5 py-4 bg-slate-50 border-b border-slate-200">
+                    <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-primary" />
+                      Usuarios del Sistema
+                    </h3>
+                  </div>
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead>RUT</TableHead>
-                        <TableHead>Rol</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
+                      <TableRow className="bg-slate-50 hover:bg-slate-50">
+                        <TableHead className="font-semibold text-slate-700">Nombre</TableHead>
+                        <TableHead className="font-semibold text-slate-700">RUT</TableHead>
+                        <TableHead className="font-semibold text-slate-700">Rol</TableHead>
+                        <TableHead className="text-right font-semibold text-slate-700">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {users.map((u: any) => (
-                        <TableRow key={u.id}>
-                          <TableCell className="font-medium">{u.nombre}</TableCell>
-                          <TableCell>{u.rut}</TableCell>
+                        <TableRow key={u.id} className="hover:bg-slate-50">
+                          <TableCell className="font-medium text-slate-800">{u.nombre}</TableCell>
+                          <TableCell className="text-slate-600">{u.rut}</TableCell>
                           <TableCell>
-                            <Badge variant={u.role === "ADMIN" ? "default" : "secondary"}>
+                            <Badge variant={u.role === "ADMIN" ? "default" : "secondary"} className="font-medium">
                               {u.role === "ADMIN" ? "Administrador" : "Trabajador"}
                             </Badge>
                           </TableCell>
@@ -373,52 +379,73 @@ export function Sidebar() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleEditUser(u)}
+                              className="border-slate-300 hover:bg-slate-100 hover:border-primary"
                             >
-                              <Edit2 className="w-4 h-4 mr-1" />
+                              <Edit2 className="w-3.5 h-3.5 mr-1.5" />
                               Editar
                             </Button>
                             <Button
                               variant="destructive"
                               size="sm"
                               onClick={() => handleDeleteUser(u.id, u.nombre)}
+                              className="shadow-sm"
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-            )}
-          </Tabs>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de Edición de Usuario (ADMIN) */}
-      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5" />
+                              <Trash2 className="w-3.5 h-3.5ht space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditUser(u)}
+                            >
+                              <Edit2 className="w-4 h-4 mr-1" />
+                              Editar
+                            </Button> bg-slate-50">
+          <DialogHeader className="border-b pb-4 bg-white -mx-6 -mt-6 px-6 pt-6">
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Key className="w-5 h-5 text-primary" />
               Editar Credenciales: {editingUser?.nombre}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-user-rut">RUT</Label>
-              <Input
-                id="edit-user-rut"
-                value={editUserForm.rut}
-                onChange={(e) => setEditUserForm({ ...editUserForm, rut: e.target.value })}
-                placeholder="12.345.678-9"
-              />
+          <div className="space-y-4 pt-2">
+            <div className="bg-white rounded-lg border border-slate-200 shadow-md p-4 space-y-4">
+              <div>
+                <Label htmlFor="edit-user-rut" className="font-semibold text-slate-700">RUT</Label>
+                <Input
+                  id="edit-user-rut"
+                  value={editUserForm.rut}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, rut: e.target.value })}
+                  placeholder="12.345.678-9"
+                  className="mt-1.5 bg-white border-slate-300 focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-user-password" className="font-semibold text-slate-700">Nueva Contraseña (Opcional)</Label>
+                <Input
+                  id="edit-user-password"
+                  type="password"
+                  value={editUserForm.newPassword}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, newPassword: e.target.value })}
+                  placeholder="Dejar vacío para no cambiar"
+                  className="mt-1.5 bg-white border-slate-300 focus:border-primary"
+                />
+                <p className="text-xs text-slate-500 mt-1.5">Mínimo 6 caracteres si deseas cambiarla</p>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="edit-user-password">Nueva Contraseña (Opcional)</Label>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1 border-slate-300 hover:bg-slate-100"
+                onClick={() => {
+                  setEditingUser(null);
+                  setEditUserForm({ rut: "", newPassword: "" });
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 bg-primary hover:bg-primary/90 shadow-mdt-user-password">Nueva Contraseña (Opcional)</Label>
               <Input
                 id="edit-user-password"
                 type="password"
