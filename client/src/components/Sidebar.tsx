@@ -347,7 +347,21 @@ export function Sidebar() {
                     <X className="w-4 h-4 mr-2" />
                     Cancelar
                   </Button>
-                  <Buttonmin-h-[400px] overflow-y-auto max-h-[60vh] pr-2">
+                  <Button
+                    className="flex-1 bg-primary hover:bg-primary/90 shadow-md"
+                    onClick={handleSaveProfile}
+                    disabled={updateUser.isPending}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {updateUser.isPending ? "Guardando..." : "Guardar Cambios"}
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Tab: Gestión de Usuarios (solo ADMIN) */}
+            {isAdmin && (
+              <TabsContent value="users" className="min-h-[400px] overflow-y-auto max-h-[60vh] pr-2">
                 <div className="bg-white rounded-lg border border-slate-200 shadow-md overflow-hidden">
                   <div className="px-5 py-4 bg-slate-50 border-b border-slate-200">
                     <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
