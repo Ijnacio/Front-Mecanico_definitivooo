@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+﻿import { Link, useLocation } from "wouter";
 import { Package, ShoppingCart, ClipboardList, Wrench, Menu, LogOut, User, Edit2, LayoutDashboard, Users, TrendingUp, Shield, Key, Trash2, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -18,7 +18,7 @@ const allLinks = [
   { href: "/reportes", label: "Reportes", icon: LayoutDashboard, roles: ["ADMIN"] },
   { href: "/inventory", label: "Inventario", icon: Package, roles: ["ADMIN", "WORKER"] },
   { href: "/purchases", label: "Proveedores", icon: ShoppingCart, roles: ["ADMIN"] },
-  { href: "/work-orders", label: "Órdenes de Trabajo", icon: ClipboardList, roles: ["ADMIN", "WORKER"] },
+  { href: "/work-orders", label: "Ã“rdenes de Trabajo", icon: ClipboardList, roles: ["ADMIN", "WORKER"] },
   { href: "/counter-sales", label: "Ventas Mostrador", icon: TrendingUp, roles: ["ADMIN", "WORKER"] },
   { href: "/clients", label: "Clientes", icon: Users, roles: ["ADMIN", "WORKER"] },
 ];
@@ -36,7 +36,7 @@ export function Sidebar() {
   const deleteUser = useDeleteUser();
   const { toast } = useToast();
   
-  // Filtrar links según el rol del usuario
+  // Filtrar links segÃºn el rol del usuario
   const userRole = (user?.role === "administrador" || user?.role === "ADMIN") ? "ADMIN" : "WORKER";
   const links = allLinks.filter(link => 
     link.roles.includes(userRole)
@@ -52,12 +52,12 @@ export function Sidebar() {
   const handleSaveProfile = async () => {
     if (!user?.id) return;
 
-    // Validar contraseña si se está cambiando
+    // Validar contraseÃ±a si se estÃ¡ cambiando
     if (editForm.newPassword) {
       if (editForm.newPassword.length < 6) {
         toast({
           title: "Error",
-          description: "La contraseña debe tener al menos 6 caracteres",
+          description: "La contraseÃ±a debe tener al menos 6 caracteres",
           variant: "destructive",
         });
         return;
@@ -65,7 +65,7 @@ export function Sidebar() {
       if (editForm.newPassword !== editForm.confirmPassword) {
         toast({
           title: "Error",
-          description: "Las contraseñas no coinciden",
+          description: "Las contraseÃ±as no coinciden",
           variant: "destructive",
         });
         return;
@@ -82,7 +82,7 @@ export function Sidebar() {
       });
 
       toast({
-        title: "✅ Perfil actualizado",
+        title: "âœ… Perfil actualizado",
         description: "Tus datos han sido actualizados correctamente",
       });
 
@@ -116,7 +116,7 @@ export function Sidebar() {
       });
 
       toast({
-        title: "✅ Usuario actualizado",
+        title: "âœ… Usuario actualizado",
         description: "Las credenciales han sido actualizadas",
       });
 
@@ -132,12 +132,12 @@ export function Sidebar() {
   };
 
   const handleDeleteUser = async (id: string, nombre: string) => {
-    if (!confirm(`¿Estás seguro de desactivar al usuario ${nombre}?`)) return;
+    if (!confirm(`Â¿EstÃ¡s seguro de desactivar al usuario ${nombre}?`)) return;
 
     try {
       await deleteUser.mutateAsync(id);
       toast({
-        title: "✅ Usuario desactivado",
+        title: "âœ… Usuario desactivado",
         description: `${nombre} ha sido desactivado correctamente`,
       });
     } catch (error: any) {
@@ -157,7 +157,7 @@ export function Sidebar() {
         </div>
         <div>
           <h1 className="text-xl font-display font-bold tracking-wider">FRENOS<span className="text-primary"> AGUILERA</span></h1>
-          <p className="text-xs text-slate-400 font-body">Sistema de Gestión</p>
+          <p className="text-xs text-slate-400 font-body">Sistema de GestiÃ³n</p>
         </div>
       </div>
       
@@ -220,7 +220,7 @@ export function Sidebar() {
           onClick={() => logout()}
         >
           <LogOut className="w-4 h-4" />
-          Cerrar Sesión
+          Cerrar SesiÃ³n
         </Button>
       </div>
     </div>
@@ -245,7 +245,7 @@ export function Sidebar() {
         <NavContent />
       </aside>
 
-      {/* Modal de Perfil y Gestión */}
+      {/* Modal de Perfil y GestiÃ³n */}
       <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
         <DialogContent className="sm:max-w-3xl w-full h-[600px] flex flex-col overflow-hidden bg-slate-50">
           <DialogHeader className="border-b pb-4 bg-white -mx-6 -mt-6 px-6 pt-6">
@@ -261,19 +261,19 @@ export function Sidebar() {
                 value="profile" 
                 className="font-semibold data-[state=active]:bg-slate-200 data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=inactive]:text-slate-600 data-[state=inactive]:bg-transparent transition-all"
               >
-                Información Personal
+                InformaciÃ³n Personal
               </TabsTrigger>
               {isAdmin && (
                 <TabsTrigger 
                   value="users" 
                   className="font-semibold data-[state=active]:bg-slate-200 data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=inactive]:text-slate-600 data-[state=inactive]:bg-transparent transition-all"
                 >
-                  Gestión de Usuarios
+                  GestiÃ³n de Usuarios
                 </TabsTrigger>
               )}
             </TabsList>
 
-            {/* Tab: Información Personal */}
+            {/* Tab: InformaciÃ³n Personal */}
             <TabsContent value="profile" className="flex-1 overflow-y-auto pr-2">
               <div className="space-y-4">
                 {/* Card: Datos Personales */}
@@ -305,7 +305,7 @@ export function Sidebar() {
                       {isAdmin && (
                         <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
                           <Shield className="w-3.5 h-3.5 text-amber-600" />
-                          <span className="font-medium">El RUT está bloqueado para administradores por seguridad</span>
+                          <span className="font-medium">El RUT estÃ¡ bloqueado para administradores por seguridad</span>
                         </p>
                       )}
                     </div>
@@ -316,37 +316,37 @@ export function Sidebar() {
                 <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5">
                   <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
                     <Key className="w-4 h-4 text-primary" />
-                    Cambiar Contraseña (Opcional)
+                    Cambiar ContraseÃ±a (Opcional)
                   </h3>
 
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="newPassword" className="font-semibold text-slate-800">Nueva Contraseña</Label>
+                      <Label htmlFor="newPassword" className="font-semibold text-slate-800">Nueva ContraseÃ±a</Label>
                       <Input
                         id="newPassword"
                         type="password"
                         value={editForm.newPassword}
                         onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
-                        placeholder="Mínimo 6 caracteres"
+                        placeholder="MÃ­nimo 6 caracteres"
                         className="mt-1.5 bg-white border-slate-300 focus:border-primary"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="confirmPassword" className="font-semibold text-slate-800">Confirmar Contraseña</Label>
+                      <Label htmlFor="confirmPassword" className="font-semibold text-slate-800">Confirmar ContraseÃ±a</Label>
                       <Input
                         id="confirmPassword"
                         type="password"
                         value={editForm.confirmPassword}
                         onChange={(e) => setEditForm({ ...editForm, confirmPassword: e.target.value })}
-                        placeholder="Repetir contraseña"
+                        placeholder="Repetir contraseÃ±a"
                         className="mt-1.5 bg-white border-slate-300 focus:border-primary"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Botones de Acción */}
+                {/* Botones de AcciÃ³n */}
                 <div className="flex gap-3 pt-2">
                   <Button
                     variant="outline"
@@ -371,7 +371,7 @@ export function Sidebar() {
               </div>
             </TabsContent>
 
-            {/* Tab: Gestión de Usuarios (solo ADMIN) */}
+            {/* Tab: GestiÃ³n de Usuarios (solo ADMIN) */}
             {isAdmin && (
               <TabsContent value="users" className="flex-1 overflow-y-auto pr-2">
                 <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-hidden">
@@ -455,16 +455,16 @@ export function Sidebar() {
               </div>
 
               <div>
-                <Label htmlFor="edit-user-password" className="font-semibold text-slate-700">Nueva Contraseña (Opcional)</Label>
+                <Label htmlFor="edit-user-password" className="font-semibold text-slate-700">Nueva ContraseÃ±a (Opcional)</Label>
                 <Input
                   id="edit-user-password"
                   type="password"
                   value={editUserForm.newPassword}
                   onChange={(e) => setEditUserForm({ ...editUserForm, newPassword: e.target.value })}
-                  placeholder="Dejar vacío para no cambiar"
+                  placeholder="Dejar vacÃ­o para no cambiar"
                   className="mt-1.5 bg-white border-slate-300 focus:border-primary"
                 />
-                <p className="text-xs text-slate-500 mt-1.5">Mínimo 6 caracteres si deseas cambiarla</p>
+                <p className="text-xs text-slate-500 mt-1.5">MÃ­nimo 6 caracteres si deseas cambiarla</p>
               </div>
             </div>
 
@@ -480,29 +480,7 @@ export function Sidebar() {
                 Cancelar
               </Button>
               <Button
-                className="flex-1 bg-primary hover:bg-primary/90 shadow-mdt-user-password">Nueva Contraseña (Opcional)</Label>
-              <Input
-                id="edit-user-password"
-                type="password"
-                value={editUserForm.newPassword}
-                onChange={(e) => setEditUserForm({ ...editUserForm, newPassword: e.target.value })}
-                placeholder="Dejar vacío para no cambiar"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setEditingUser(null);
-                  setEditUserForm({ rut: "", newPassword: "" });
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                className="flex-1"
+                className="flex-1 bg-primary hover:bg-primary/90 shadow-md"
                 onClick={handleSaveUserEdit}
                 disabled={updateUser.isPending}
               >
@@ -511,6 +489,7 @@ export function Sidebar() {
             </div>
           </div>
         </DialogContent>
+      </Dialog>
       </Dialog>
     </>
   );
