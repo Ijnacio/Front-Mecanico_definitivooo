@@ -138,7 +138,7 @@ export function Sidebar() {
       await deleteUser.mutateAsync(id);
       toast({
         title: "✅ Usuario desactivado",
-        description: `${nombre} ha sido desactivado correctamente",
+        description: `${nombre} ha sido desactivado correctamente`,
       });
     } catch (error: any) {
       toast({
