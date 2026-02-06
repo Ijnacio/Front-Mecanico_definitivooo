@@ -1,6 +1,6 @@
 ﻿import { Link, useLocation } from "wouter";
 import { Package, ShoppingCart, ClipboardList, Wrench, Menu, LogOut, User, Edit2, LayoutDashboard, Users, TrendingUp, Shield, Key, Trash2, Save, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatRutCL, cleanRutCL, validateRutCL } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { useQueryClient } from "@tanstack/react-query";
 
 const allLinks = [
   { href: "/reportes", label: "Reportes", icon: LayoutDashboard, roles: ["ADMIN"] },
@@ -27,14 +28,15 @@ export function Sidebar() {
   const [location, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ nombre: "", newPassword: "", confirmPassword: "" });
+  const [editForm, setEditForm] = useState({ nombre: "" });
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [editUserForm, setEditUserForm] = useState({ rut: "", newPassword: "" });
+  const [editUserForm, setEditUserForm] = useState({ nombre: "", rut: "", newPassword: "" });
   const { user, logout } = useAuth();
   const updateUser = useUpdateUser();
   const { data: users = [] } = useUsers();
   const deleteUser = useDeleteUser();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Filtrar links según el rol del usuario
   const userRole = (user?.role === "administrador" || user?.role === "ADMIN") ? "ADMIN" : "WORKER";
@@ -45,31 +47,20 @@ export function Sidebar() {
   const isAdmin = user?.role === "ADMIN" || user?.role === "administrador";
 
   const handleOpenEditProfile = () => {
-    setEditForm({ nombre: user?.nombre || "", newPassword: "", confirmPassword: "" });
+    setEditForm({ nombre: user?.nombre || "" });
     setEditProfileOpen(true);
   };
 
   const handleSaveProfile = async () => {
     if (!user?.id) return;
 
-    // Validar contraseña si se está cambiando
-    if (editForm.newPassword) {
-      if (editForm.newPassword.length < 6) {
-        toast({
-          title: "Error",
-          description: "La contraseña debe tener al menos 6 caracteres",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (editForm.newPassword !== editForm.confirmPassword) {
-        toast({
-          title: "Error",
-          description: "Las contraseñas no coinciden",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!editForm.nombre.trim()) {
+      toast({
+        title: "Error",
+        description: "El nombre no puede estar vacío",
+        variant: "destructive",
+      });
+      return;
     }
 
     try {
@@ -77,18 +68,22 @@ export function Sidebar() {
         id: user.id,
         data: {
           nombre: editForm.nombre,
-          newPassword: editForm.newPassword || undefined,
         },
       });
 
+      // Actualizar manualmente el usuario en la cache
+      queryClient.setQueryData(["user"], (old: any) => ({
+        ...old,
+        nombre: editForm.nombre,
+      }));
+
       toast({
         title: "✅ Perfil actualizado",
-        description: "Tus datos han sido actualizados correctamente",
+        description: "Tu nombre ha sido actualizado correctamente",
       });
 
       setEditProfileOpen(false);
-      setEditForm({ nombre: "", newPassword: "", confirmPassword: "" });
-      window.location.reload();
+      setEditForm({ nombre: "" });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -100,28 +95,63 @@ export function Sidebar() {
 
   const handleEditUser = (targetUser: any) => {
     setEditingUser(targetUser);
-    setEditUserForm({ rut: targetUser.rut, newPassword: "" });
+    setEditUserForm({ 
+      nombre: targetUser.nombre,
+      rut: formatRutCL(targetUser.rut), 
+      newPassword: "" 
+    });
   };
 
   const handleSaveUserEdit = async () => {
     if (!editingUser) return;
 
+    // Validar nombre
+    if (!editUserForm.nombre.trim()) {
+      toast({
+        title: "Error",
+        description: "El nombre no puede estar vacío",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar RUT
+    if (!validateRutCL(editUserForm.rut)) {
+      toast({
+        title: "Error",
+        description: "El RUT debe tener entre 8 y 9 caracteres (ej: 12.345.678-9)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar contraseña si se está cambiando
+    if (editUserForm.newPassword && editUserForm.newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "La contraseña debe tener al menos 6 caracteres",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await updateUser.mutateAsync({
         id: editingUser.id,
         data: {
-          rut: editUserForm.rut,
+          nombre: editUserForm.nombre,
+          rut: cleanRutCL(editUserForm.rut),
           newPassword: editUserForm.newPassword || undefined,
         },
       });
 
       toast({
         title: "✅ Usuario actualizado",
-        description: "Las credenciales han sido actualizadas",
+        description: "Los datos han sido actualizados correctamente",
       });
 
       setEditingUser(null);
-      setEditUserForm({ rut: "", newPassword: "" });
+      setEditUserForm({ nombre: "", rut: "", newPassword: "" });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -298,56 +328,31 @@ export function Sidebar() {
                       <Label htmlFor="rut" className="font-semibold text-slate-800">RUT</Label>
                       <Input
                         id="rut"
-                        value={user?.rut || ""}
-                        disabled={isAdmin}
-                        placeholder="12.345.678-9"
-                        maxLength={12}
-                        className={isAdmin ? "mt-1.5 bg-slate-100 border-slate-300 cursor-not-allowed text-slate-500" : "mt-1.5 bg-white border-slate-300"}
+                        value={formatRutCL(user?.rut) || ""}
+                        disabled
+                        className="mt-1.5 bg-slate-100 border-slate-300 cursor-not-allowed text-slate-500"
                       />
-                      {isAdmin && (
-                        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
-                          <Shield className="w-3.5 h-3.5 text-amber-600" />
-                          <span className="font-medium">El RUT está bloqueado para administradores por seguridad</span>
-                        </p>
-                      )}
+                      <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded px-2 py-1.5">
+                        <Shield className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="font-medium">El RUT no se puede modificar. Contacta al administrador si es necesario.</span>
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Card: Seguridad - SOLO ADMIN */}
+                {/* Información sobre cambio de contraseña */}
                 {isAdmin && (
-                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5 h-[240px] flex flex-col">
-                  <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                    <Key className="w-4 h-4 text-primary" />
-                    Cambiar Contraseña (Opcional)
-                  </h3>
-
-                  <div className="space-y-3 flex-1">
-                    <div>
-                      <Label htmlFor="newPassword" className="font-semibold text-slate-800">Nueva Contraseña</Label>
-                      <Input
-                        id="newPassword"
-                        type="password"
-                        value={editForm.newPassword}
-                        onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
-                        placeholder="Mínimo 6 caracteres"
-                        className="mt-1.5 bg-white border-slate-300 focus:border-primary"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="confirmPassword" className="font-semibold text-slate-800">Confirmar Contraseña</Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        value={editForm.confirmPassword}
-                        onChange={(e) => setEditForm({ ...editForm, confirmPassword: e.target.value })}
-                        placeholder="Repite la contraseña"
-                        className="mt-1.5 bg-white border-slate-300 focus:border-primary"
-                      />
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                      <Key className="w-5 h-5 text-amber-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-semibold text-amber-900 text-sm">Cambio de Contraseña y RUT</h4>
+                        <p className="text-xs text-amber-700 mt-1">
+                          Para cambiar la contraseña o el RUT, utiliza la pestaña <strong>"Gestión de Usuarios"</strong>.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
                 )}
 
                 {/* Botones de Acción */}
@@ -357,7 +362,7 @@ export function Sidebar() {
                     className="flex-1 border-slate-300 hover:bg-slate-100"
                     onClick={() => {
                       setEditProfileOpen(false);
-                      setEditForm({ nombre: "", newPassword: "", confirmPassword: "" });
+                      setEditForm({ nombre: "" });
                     }}
                   >
                     <X className="w-4 h-4 mr-2" />
@@ -399,7 +404,7 @@ export function Sidebar() {
                       {users.map((u: any) => (
                         <TableRow key={u.id} className="hover:bg-slate-50">
                           <TableCell className="font-medium text-slate-800">{u.nombre}</TableCell>
-                          <TableCell className="text-slate-600">{u.rut}</TableCell>
+                          <TableCell className="text-slate-600">{formatRutCL(u.rut)}</TableCell>
                           <TableCell>
                             <Badge variant={u.role === "ADMIN" ? "default" : "secondary"} className="font-medium">
                               {u.role === "ADMIN" ? "Administrador" : "Trabajador"}
@@ -442,23 +447,38 @@ export function Sidebar() {
         <DialogContent className="sm:max-w-md bg-slate-50">
           <DialogHeader className="border-b pb-4 bg-white -mx-6 -mt-6 px-6 pt-6">
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Key className="w-5 h-5 text-primary" />
-              Editar Credenciales: {editingUser?.nombre}
+              <Edit2 className="w-5 h-5 text-primary" />
+              Editar Usuario: {editingUser?.nombre}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
             <div className="bg-white rounded-lg border border-slate-200 shadow-md p-4 space-y-4">
               <div>
+                <Label htmlFor="edit-user-nombre" className="font-semibold text-slate-700">Nombre Completo</Label>
+                <Input
+                  id="edit-user-nombre"
+                  value={editUserForm.nombre}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, nombre: e.target.value })}
+                  placeholder="Nombre completo del usuario"
+                  className="mt-1.5 bg-white border-slate-300 focus:border-primary"
+                />
+              </div>
+
+              <div>
                 <Label htmlFor="edit-user-rut" className="font-semibold text-slate-700">RUT</Label>
                 <Input
                   id="edit-user-rut"
                   value={editUserForm.rut}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, rut: e.target.value })}
+                  onChange={(e) => {
+                    const formatted = formatRutCL(e.target.value);
+                    setEditUserForm({ ...editUserForm, rut: formatted });
+                  }}
                   placeholder="12.345.678-9"
                   maxLength={12}
                   className="mt-1.5 bg-white border-slate-300 focus:border-primary"
                 />
+                <p className="text-xs text-slate-500 mt-1.5">Formato: 12.345.678-9 (mínimo 8, máximo 9 caracteres)</p>
               </div>
 
               <div>
@@ -481,7 +501,7 @@ export function Sidebar() {
                 className="flex-1 border-slate-300 hover:bg-slate-100"
                 onClick={() => {
                   setEditingUser(null);
-                  setEditUserForm({ rut: "", newPassword: "" });
+                  setEditUserForm({ nombre: "", rut: "", newPassword: "" });
                 }}
               >
                 Cancelar

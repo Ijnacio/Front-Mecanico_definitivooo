@@ -74,3 +74,25 @@ export function formatRutCL(rut?: string | null): string {
   
   return `${finalBody}-${dv}`;
 }
+
+/**
+ * Limpia un RUT chileno quitando puntos y guiones
+ * @param rut - RUT en formato "12.345.678-9"
+ * @returns RUT limpio como "123456789"
+ */
+export function cleanRutCL(rut?: string | null): string {
+  if (!rut) return "";
+  return rut.replace(/[^0-9kK]/g, "").toUpperCase();
+}
+
+/**
+ * Valida que un RUT chileno tenga el formato correcto
+ * @param rut - RUT en cualquier formato
+ * @returns true si el RUT tiene entre 8 y 9 caracteres (7-8 números + 1 dígito verificador)
+ */
+export function validateRutCL(rut?: string | null): boolean {
+  if (!rut) return false;
+  const cleaned = cleanRutCL(rut);
+  // RUT válido: mínimo 7 números + DV, máximo 8 números + DV (8-9 caracteres totales)
+  return cleaned.length >= 8 && cleaned.length <= 9;
+}
