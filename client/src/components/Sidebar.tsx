@@ -18,7 +18,7 @@ const allLinks = [
   { href: "/reportes", label: "Reportes", icon: LayoutDashboard, roles: ["ADMIN"] },
   { href: "/inventory", label: "Inventario", icon: Package, roles: ["ADMIN", "WORKER"] },
   { href: "/purchases", label: "Proveedores", icon: ShoppingCart, roles: ["ADMIN"] },
-  { href: "/work-orders", label: "Ã“rdenes de Trabajo", icon: ClipboardList, roles: ["ADMIN", "WORKER"] },
+  { href: "/work-orders", label: "Órdenes de Trabajo", icon: ClipboardList, roles: ["ADMIN", "WORKER"] },
   { href: "/counter-sales", label: "Ventas Mostrador", icon: TrendingUp, roles: ["ADMIN", "WORKER"] },
   { href: "/clients", label: "Clientes", icon: Users, roles: ["ADMIN", "WORKER"] },
 ];
@@ -36,7 +36,7 @@ export function Sidebar() {
   const deleteUser = useDeleteUser();
   const { toast } = useToast();
   
-  // Filtrar links segÃºn el rol del usuario
+  // Filtrar links según el rol del usuario
   const userRole = (user?.role === "administrador" || user?.role === "ADMIN") ? "ADMIN" : "WORKER";
   const links = allLinks.filter(link => 
     link.roles.includes(userRole)
@@ -52,12 +52,12 @@ export function Sidebar() {
   const handleSaveProfile = async () => {
     if (!user?.id) return;
 
-    // Validar contraseÃ±a si se estÃ¡ cambiando
+    // Validar contraseña si se está cambiando
     if (editForm.newPassword) {
       if (editForm.newPassword.length < 6) {
         toast({
           title: "Error",
-          description: "La contraseÃ±a debe tener al menos 6 caracteres",
+          description: "La contraseña debe tener al menos 6 caracteres",
           variant: "destructive",
         });
         return;
@@ -65,7 +65,7 @@ export function Sidebar() {
       if (editForm.newPassword !== editForm.confirmPassword) {
         toast({
           title: "Error",
-          description: "Las contraseÃ±as no coinciden",
+          description: "Las contraseñas no coinciden",
           variant: "destructive",
         });
         return;
@@ -132,7 +132,7 @@ export function Sidebar() {
   };
 
   const handleDeleteUser = async (id: string, nombre: string) => {
-    if (!confirm(`Â¿EstÃ¡s seguro de desactivar al usuario ${nombre}?`)) return;
+    if (!confirm(`¿Estás seguro de desactivar al usuario ${nombre}?`)) return;
 
     try {
       await deleteUser.mutateAsync(id);
@@ -157,7 +157,7 @@ export function Sidebar() {
         </div>
         <div>
           <h1 className="text-xl font-display font-bold tracking-wider">FRENOS<span className="text-primary"> AGUILERA</span></h1>
-          <p className="text-xs text-slate-400 font-body">Sistema de GestiÃ³n</p>
+          <p className="text-xs text-slate-400 font-body">Sistema de Gestión</p>
         </div>
       </div>
       
@@ -220,7 +220,7 @@ export function Sidebar() {
           onClick={() => logout()}
         >
           <LogOut className="w-4 h-4" />
-          Cerrar SesiÃ³n
+          Cerrar Sesión
         </Button>
       </div>
     </div>
@@ -277,12 +277,12 @@ export function Sidebar() {
             <TabsContent value="profile" className="flex-1 overflow-y-auto pr-2 pb-4">
               <div className="space-y-4">
                 {/* Card: Datos Personales */}
-                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5 min-h-[280px] flex flex-col">
+                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5 h-[240px] flex flex-col">
                   <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
                     <User className="w-4 h-4 text-primary" />
                     Datos Personales
                   </h3>
-                  <div className="space-y-4 flex-1">
+                  <div className="space-y-3 flex-1">
                     <div>
                       <Label htmlFor="nombre" className="font-semibold text-slate-800">Nombre Completo</Label>
                       <Input
@@ -315,13 +315,13 @@ export function Sidebar() {
                 </div>
 
                 {/* Card: Seguridad */}
-                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5 min-h-[280px] flex flex-col">
+                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5 h-[240px] flex flex-col">
                   <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
                     <Key className="w-4 h-4 text-primary" />
                     Cambiar Contraseña (Opcional)
                   </h3>
 
-                  <div className="space-y-4 flex-1">
+                  <div className="space-y-3 flex-1">
                     <div>
                       <Label htmlFor="newPassword" className="font-semibold text-slate-800">Nueva Contraseña</Label>
                       <Input
