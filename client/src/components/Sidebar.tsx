@@ -247,7 +247,7 @@ export function Sidebar() {
 
       {/* Modal de Perfil y Gestión */}
       <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-hidden bg-slate-50">
+        <DialogContent className="sm:max-w-3xl w-full h-[600px] flex flex-col overflow-hidden bg-slate-50">
           <DialogHeader className="border-b pb-4 bg-white -mx-6 -mt-6 px-6 pt-6">
             <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
               <User className="w-6 h-6 text-primary" />
@@ -255,24 +255,36 @@ export function Sidebar() {
             </DialogTitle>
           </DialogHeader>
 
-          <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-white border">
-              <TabsTrigger value="profile" className="font-semibold">Información Personal</TabsTrigger>
-              {isAdmin && <TabsTrigger value="users" className="font-semibold">Gestión de Usuarios</TabsTrigger>}
+          <Tabs defaultValue="profile" className="w-full flex-1 flex flex-col">
+            <TabsList className="grid w-full grid-cols-2 bg-slate-100 border border-slate-200">
+              <TabsTrigger 
+                value="profile" 
+                className="font-semibold data-[state=active]:bg-slate-200 data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=inactive]:text-slate-600 data-[state=inactive]:bg-transparent transition-all"
+              >
+                Información Personal
+              </TabsTrigger>
+              {isAdmin && (
+                <TabsTrigger 
+                  value="users" 
+                  className="font-semibold data-[state=active]:bg-slate-200 data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=inactive]:text-slate-600 data-[state=inactive]:bg-transparent transition-all"
+                >
+                  Gestión de Usuarios
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* Tab: Información Personal */}
-            <TabsContent value="profile" className="min-h-[400px] overflow-y-auto max-h-[60vh] pr-2">
+            <TabsContent value="profile" className="flex-1 overflow-y-auto pr-2">
               <div className="space-y-4">
                 {/* Card: Datos Personales */}
-                <div className="bg-white rounded-lg border border-slate-200 shadow-md p-5">
-                  <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5">
+                  <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
                     <User className="w-4 h-4 text-primary" />
                     Datos Personales
                   </h3>
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="nombre" className="font-semibold text-slate-700">Nombre Completo</Label>
+                      <Label htmlFor="nombre" className="font-semibold text-slate-800">Nombre Completo</Label>
                       <Input
                         id="nombre"
                         value={editForm.nombre}
@@ -283,7 +295,7 @@ export function Sidebar() {
                     </div>
 
                     <div>
-                      <Label htmlFor="rut" className="font-semibold text-slate-700">RUT</Label>
+                      <Label htmlFor="rut" className="font-semibold text-slate-800">RUT</Label>
                       <Input
                         id="rut"
                         value={user?.rut || ""}
@@ -301,15 +313,15 @@ export function Sidebar() {
                 </div>
 
                 {/* Card: Seguridad */}
-                <div className="bg-white rounded-lg border border-slate-200 shadow-md p-5">
-                  <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5">
+                  <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
                     <Key className="w-4 h-4 text-primary" />
                     Cambiar Contraseña (Opcional)
                   </h3>
 
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="newPassword" className="font-semibold text-slate-700">Nueva Contraseña</Label>
+                      <Label htmlFor="newPassword" className="font-semibold text-slate-800">Nueva Contraseña</Label>
                       <Input
                         id="newPassword"
                         type="password"
@@ -321,7 +333,7 @@ export function Sidebar() {
                     </div>
 
                     <div>
-                      <Label htmlFor="confirmPassword" className="font-semibold text-slate-700">Confirmar Contraseña</Label>
+                      <Label htmlFor="confirmPassword" className="font-semibold text-slate-800">Confirmar Contraseña</Label>
                       <Input
                         id="confirmPassword"
                         type="password"
@@ -361,8 +373,8 @@ export function Sidebar() {
 
             {/* Tab: Gestión de Usuarios (solo ADMIN) */}
             {isAdmin && (
-              <TabsContent value="users" className="min-h-[400px] overflow-y-auto max-h-[60vh] pr-2">
-                <div className="bg-white rounded-lg border border-slate-200 shadow-md overflow-hidden">
+              <TabsContent value="users" className="flex-1 overflow-y-auto pr-2">
+                <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-hidden">
                   <div className="px-5 py-4 bg-slate-50 border-b border-slate-200">
                     <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                       <Users className="w-4 h-4 text-primary" />
@@ -404,15 +416,24 @@ export function Sidebar() {
                               onClick={() => handleDeleteUser(u.id, u.nombre)}
                               className="shadow-sm"
                             >
-                              <Trash2 className="w-3.5 h-3.5ht space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditUser(u)}
-                            >
-                              <Edit2 className="w-4 h-4 mr-1" />
-                              Editar
-                            </Button> bg-slate-50">
+                              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                              Eliminar
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            )}
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal secundario para editar usuarios */}
+      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+        <DialogContent className="sm:max-w-md bg-slate-50">
           <DialogHeader className="border-b pb-4 bg-white -mx-6 -mt-6 px-6 pt-6">
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
               <Key className="w-5 h-5 text-primary" />
