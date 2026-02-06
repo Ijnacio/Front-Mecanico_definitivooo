@@ -490,7 +490,7 @@ export function Sidebar() {
           </div>
         </DialogContent>
       </Dialog>
-      </Dialog>
     </>
   );
+}
 }
