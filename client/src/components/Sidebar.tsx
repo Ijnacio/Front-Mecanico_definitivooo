@@ -376,13 +376,14 @@ export function Sidebar() {
             {/* Tab: GestiÃ³n de Usuarios (solo ADMIN) */}
             {isAdmin && (
               <TabsContent value="users" className="flex-1 overflow-y-auto pr-2 pb-4">
-                <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-hidden h-[496px] flex flex-col">
                   <div className="px-5 py-4 bg-slate-50 border-b border-slate-200">
                     <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                       <Users className="w-4 h-4 text-primary" />
                       Usuarios del Sistema
                     </h3>
                   </div>
+                  <div className="flex-1 overflow-y-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-slate-50 hover:bg-slate-50">
@@ -426,6 +427,7 @@ export function Sidebar() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 </div>
               </TabsContent>
             )}
