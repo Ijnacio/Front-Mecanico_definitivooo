@@ -247,7 +247,7 @@ export function Sidebar() {
 
       {/* Modal de Perfil y GestiÃ³n */}
       <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
-        <DialogContent className="sm:max-w-3xl w-full h-[600px] flex flex-col overflow-hidden bg-slate-50">
+        <DialogContent className="sm:max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden bg-slate-50">
           <DialogHeader className="border-b pb-4 bg-white -mx-6 -mt-6 px-6 pt-6">
             <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
               <User className="w-6 h-6 text-primary" />
@@ -255,7 +255,7 @@ export function Sidebar() {
             </DialogTitle>
           </DialogHeader>
 
-          <Tabs defaultValue="profile" className="w-full flex-1 flex flex-col">
+          <Tabs defaultValue="profile" className="w-full flex-1 flex flex-col overflow-hidden">
             <TabsList className="grid w-full grid-cols-2 bg-slate-100 border border-slate-200">
               <TabsTrigger 
                 value="profile" 
@@ -274,7 +274,7 @@ export function Sidebar() {
             </TabsList>
 
             {/* Tab: InformaciÃ³n Personal */}
-            <TabsContent value="profile" className="flex-1 overflow-y-auto pr-2">
+            <TabsContent value="profile" className="flex-1 overflow-y-auto pr-2 pb-4">
               <div className="space-y-4">
                 {/* Card: Datos Personales */}
                 <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5 min-h-[280px] flex flex-col">
@@ -375,7 +375,7 @@ export function Sidebar() {
 
             {/* Tab: GestiÃ³n de Usuarios (solo ADMIN) */}
             {isAdmin && (
-              <TabsContent value="users" className="flex-1 overflow-y-auto pr-2">
+              <TabsContent value="users" className="flex-1 overflow-y-auto pr-2 pb-4">
                 <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-hidden">
                   <div className="px-5 py-4 bg-slate-50 border-b border-slate-200">
                     <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
