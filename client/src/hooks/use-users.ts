@@ -15,7 +15,6 @@ interface ChangePasswordDTO {
 }
 
 interface UpdateUserDTO {
-  nombre?: string;
   rut?: string;
   newPassword?: string;
 }

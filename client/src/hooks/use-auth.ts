@@ -59,20 +59,33 @@ export function useAuth() {
           return null;
         }
 
-        // En lugar de llamar a /auth/me (que no existe), decodificamos el token localmente
-        // Esto es seguro porque las llamadas subsiguientes al API fallarán si el token es inválido/expirado
-        const userFromToken = decodeJwtPayload(token);
+        // Obtener usuario actualizado desde el backend
+        const response = await fetch(getApiUrl("/auth/me"), {
+          headers: getAuthHeaders(),
+        });
 
-        if (userFromToken) {
-          // Opcional: Podríamos verificar la expiración aquí si el token tiene 'exp'
-          return userFromToken;
+        if (!response.ok) {
+          // Si el token es inválido o expiró, limpiar sesión
+          localStorage.removeItem("access_token");
+          return null;
         }
 
-        // Si el token no tiene formato válido, lo eliminamos
-        localStorage.removeItem("access_token");
-        return null;
+        const userData = await response.json();
+        return userData as User;
       } catch (error) {
-        localStorage.removeItem("access_token");
+        // En caso de error, intentar decodificar el token como fallback
+        try {
+          const token = getAuthToken();
+          if (token) {
+            const userFromToken = decodeJwtPayload(token);
+            if (userFromToken) {
+              return userFromToken;
+            }
+          }
+        } catch {
+          // Si todo falla, limpiar sesión
+          localStorage.removeItem("access_token");
+        }
         return null;
       }
     },

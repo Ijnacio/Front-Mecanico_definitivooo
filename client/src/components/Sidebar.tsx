@@ -28,9 +28,9 @@ export function Sidebar() {
   const [location, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ nombre: "" });
+  const [editForm, setEditForm] = useState({});
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [editUserForm, setEditUserForm] = useState({ nombre: "", rut: "", newPassword: "" });
+  const [editUserForm, setEditUserForm] = useState({ rut: "", newPassword: "" });
   const { user, logout } = useAuth();
   const updateUser = useUpdateUser();
   const { data: users = [] } = useUsers();
@@ -47,56 +47,14 @@ export function Sidebar() {
   const isAdmin = user?.role === "ADMIN" || user?.role === "administrador";
 
   const handleOpenEditProfile = () => {
-    setEditForm({ nombre: user?.nombre || "" });
     setEditProfileOpen(true);
   };
 
-  const handleSaveProfile = async () => {
-    if (!user?.id) return;
-
-    if (!editForm.nombre.trim()) {
-      toast({
-        title: "Error",
-        description: "El nombre no puede estar vacío",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await updateUser.mutateAsync({
-        id: user.id,
-        data: {
-          nombre: editForm.nombre,
-        },
-      });
-
-      // Actualizar manualmente el usuario en la cache
-      queryClient.setQueryData(["user"], (old: any) => ({
-        ...old,
-        nombre: editForm.nombre,
-      }));
-
-      toast({
-        title: "✅ Perfil actualizado",
-        description: "Tu nombre ha sido actualizado correctamente",
-      });
-
-      setEditProfileOpen(false);
-      setEditForm({ nombre: "" });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo actualizar el perfil",
-        variant: "destructive",
-      });
-    }
-  };
+  // Función removida - Los trabajadores no pueden editar su perfil
 
   const handleEditUser = (targetUser: any) => {
     setEditingUser(targetUser);
     setEditUserForm({ 
-      nombre: targetUser.nombre,
       rut: formatRutCL(targetUser.rut), 
       newPassword: "" 
     });
@@ -104,16 +62,6 @@ export function Sidebar() {
 
   const handleSaveUserEdit = async () => {
     if (!editingUser) return;
-
-    // Validar nombre
-    if (!editUserForm.nombre.trim()) {
-      toast({
-        title: "Error",
-        description: "El nombre no puede estar vacío",
-        variant: "destructive",
-      });
-      return;
-    }
 
     // Validar RUT
     if (!validateRutCL(editUserForm.rut)) {
@@ -139,7 +87,6 @@ export function Sidebar() {
       await updateUser.mutateAsync({
         id: editingUser.id,
         data: {
-          nombre: editUserForm.nombre,
           rut: cleanRutCL(editUserForm.rut),
           newPassword: editUserForm.newPassword || undefined,
         },
@@ -151,7 +98,7 @@ export function Sidebar() {
       });
 
       setEditingUser(null);
-      setEditUserForm({ nombre: "", rut: "", newPassword: "" });
+      setEditUserForm({ rut: "", newPassword: "" });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -307,7 +254,7 @@ export function Sidebar() {
             <TabsContent value="profile" className="flex-1 overflow-y-auto pr-2 pb-4">
               <div className="space-y-4">
                 {/* Card: Datos Personales */}
-                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5 h-[240px] flex flex-col">
+                <div className="bg-white rounded-lg border border-slate-300 shadow-sm p-5 flex flex-col">
                   <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
                     <User className="w-4 h-4 text-primary" />
                     Datos Personales
@@ -317,10 +264,9 @@ export function Sidebar() {
                       <Label htmlFor="nombre" className="font-semibold text-slate-800">Nombre Completo</Label>
                       <Input
                         id="nombre"
-                        value={editForm.nombre}
-                        onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
-                        placeholder="Nombre completo"
-                        className="mt-1.5 bg-white border-slate-300 focus:border-primary"
+                        value={user?.nombre || ""}
+                        disabled
+                        className="mt-1.5 bg-slate-100 border-slate-300 cursor-not-allowed text-slate-500"
                       />
                     </div>
 
@@ -332,58 +278,44 @@ export function Sidebar() {
                         disabled
                         className="mt-1.5 bg-slate-100 border-slate-300 cursor-not-allowed text-slate-500"
                       />
-                      <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded px-2 py-1.5">
-                        <Shield className="w-3.5 h-3.5 text-blue-600" />
-                        <span className="font-medium">El RUT no se puede modificar. Contacta al administrador si es necesario.</span>
-                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Información sobre cambio de contraseña */}
+                {/* Información sobre cambio de contraseña y RUT */}
                 {isAdmin && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                     <div className="flex items-start gap-2">
                       <Key className="w-5 h-5 text-amber-600 mt-0.5" />
                       <div>
-                        <h4 className="font-semibold text-amber-900 text-sm">Cambio de Contraseña y RUT</h4>
+                        <h4 className="font-semibold text-amber-900 text-sm">Editar Usuarios</h4>
                         <p className="text-xs text-amber-700 mt-1">
-                          Para cambiar la contraseña o el RUT, utiliza la pestaña <strong>"Gestión de Usuarios"</strong>.
+                          Para editar el RUT o cambiar la contraseña de usuarios, utiliza la pestaña <strong>"Gestión de Usuarios"</strong>.
                         </p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Botones de Acción */}
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1 border-slate-300 hover:bg-slate-100"
-                    onClick={() => {
-                      setEditProfileOpen(false);
-                      setEditForm({ nombre: "" });
-                    }}
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Cancelar
-                  </Button>
-                  <Button
-                    className="flex-1 bg-primary hover:bg-primary/90 shadow-md"
-                    onClick={handleSaveProfile}
-                    disabled={updateUser.isPending}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {updateUser.isPending ? "Guardando..." : "Guardar Cambios"}
-                  </Button>
-                </div>
+                {/* Botón Cerrar - Solo para trabajadores */}
+                {!isAdmin && (
+                  <div className="flex justify-center pt-2">
+                    <Button
+                      variant="outline"
+                      className="border-slate-300 hover:bg-slate-100"
+                      onClick={() => setEditProfileOpen(false)}
+                    >
+                      Cerrar
+                    </Button>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
             {/* Tab: GestiÃ³n de Usuarios (solo ADMIN) */}
             {isAdmin && (
               <TabsContent value="users" className="flex-1 overflow-y-auto pr-2 pb-4">
-                <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-hidden h-[496px] flex flex-col">
+                <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-hidden min-h-[350px] flex flex-col">
                   <div className="px-5 py-4 bg-slate-50 border-b border-slate-200">
                     <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                       <Users className="w-4 h-4 text-primary" />
@@ -455,14 +387,13 @@ export function Sidebar() {
           <div className="space-y-4 pt-2">
             <div className="bg-white rounded-lg border border-slate-200 shadow-md p-4 space-y-4">
               <div>
-                <Label htmlFor="edit-user-nombre" className="font-semibold text-slate-700">Nombre Completo</Label>
+                <Label className="font-semibold text-slate-700">Nombre Completo</Label>
                 <Input
-                  id="edit-user-nombre"
-                  value={editUserForm.nombre}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, nombre: e.target.value })}
-                  placeholder="Nombre completo del usuario"
-                  className="mt-1.5 bg-white border-slate-300 focus:border-primary"
+                  value={editingUser?.nombre || ""}
+                  disabled
+                  className="mt-1.5 bg-slate-100 border-slate-300 cursor-not-allowed text-slate-500"
                 />
+                <p className="text-xs text-slate-500 mt-1.5">El nombre no se puede modificar</p>
               </div>
 
               <div>
@@ -501,7 +432,7 @@ export function Sidebar() {
                 className="flex-1 border-slate-300 hover:bg-slate-100"
                 onClick={() => {
                   setEditingUser(null);
-                  setEditUserForm({ nombre: "", rut: "", newPassword: "" });
+                  setEditUserForm({ rut: "", newPassword: "" });
                 }}
               >
                 Cancelar
