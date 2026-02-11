@@ -767,9 +767,24 @@ function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: bool
           queryClient.invalidateQueries({ queryKey: ["work-orders"] });
         },
         onError: (err: any) => {
+          // Detectar error de número de orden duplicado
+          let errorTitle = "❌ Error al actualizar orden";
+          let errorDescription = err.message || "Ocurrió un problema al actualizar la orden de trabajo. Verifica los datos.";
+
+          // Detectar violación de unicidad en número de orden
+          if (err.message && (
+            err.message.includes("duplicate key") ||
+            err.message.includes("unique constraint") ||
+            err.message.includes("UQ_") ||
+            err.message.includes("numero_orden_papel")
+          )) {
+            errorTitle = "⚠️ Número de Orden Duplicado";
+            errorDescription = `El número de orden física ${form.getValues("numero_orden_papel")} ya está en uso. Por favor, elige un número diferente.`;
+          }
+
           toast({
-            title: "❌ Error al actualizar orden",
-            description: err.message || "Ocurrió un problema al actualizar la orden de trabajo. Verifica los datos.",
+            title: errorTitle,
+            description: errorDescription,
             variant: "destructive",
             duration: 8000,
             className: "bg-red-600 border-red-700 text-white [&>div]:text-white"
@@ -800,9 +815,24 @@ function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: bool
           queryClient.invalidateQueries({ queryKey: ["/work-orders"] });
         },
         onError: (err: any) => {
+          // Detectar error de número de orden duplicado
+          let errorTitle = "❌ Error al crear orden";
+          let errorDescription = err.message || "Ocurrió un problema al crear la orden de trabajo. Verifica los datos.";
+
+          // Detectar violación de unicidad en número de orden
+          if (err.message && (
+            err.message.includes("duplicate key") ||
+            err.message.includes("unique constraint") ||
+            err.message.includes("UQ_") ||
+            err.message.includes("numero_orden_papel")
+          )) {
+            errorTitle = "⚠️ Número de Orden Duplicado";
+            errorDescription = `El número de orden física ${form.getValues("numero_orden_papel")} ya está en uso. Por favor, elige un número diferente.`;
+          }
+
           toast({
-            title: "❌ Error al crear orden",
-            description: err.message || "Ocurrió un problema al crear la orden de trabajo. Verifica los datos.",
+            title: errorTitle,
+            description: errorDescription,
             variant: "destructive",
             duration: 8000,
             className: "bg-red-600 border-red-700 text-white [&>div]:text-white"
