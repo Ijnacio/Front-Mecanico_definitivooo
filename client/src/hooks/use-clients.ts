@@ -27,7 +27,7 @@ export function useClients() {
       });
       if (!res.ok) throw new Error("Error al cargar clientes");
       const data = await res.json();
-      
+
       // Ordenar clientes por fecha de creación descendente (más nuevos primero)
       return data.sort((a: any, b: any) => {
         const dateA = new Date(a.createdAt || a.fecha_creacion || 0).getTime();
@@ -80,6 +80,7 @@ export function useUpdateClient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["work-orders"] });
     },
   });
 }
@@ -100,6 +101,7 @@ export function useDeleteClient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["work-orders"] });
     },
   });
 }

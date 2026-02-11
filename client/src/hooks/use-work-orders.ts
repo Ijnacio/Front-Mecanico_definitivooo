@@ -22,6 +22,7 @@ export interface WorkOrder {
     nombre: string;
     rut: string | null;
     telefono: string | null;
+    email?: string | null;
   };
   detalles: WorkOrderDetail[];
   createdByName: string;
@@ -38,6 +39,7 @@ export interface WorkOrderDetail {
     id: string;
     sku: string;
     nombre: string;
+    stock_actual: number; // Agregado para validaciones de stock en el front
   } | null;
 }
 
@@ -62,7 +64,7 @@ export interface CreateWorkOrderDTO {
     descripcion?: string;
     precio: number;
     product_sku?: string;
-    cantidad?: number; // Backend ahora acepta "cantidad"
+    cantidad?: number;
   }[];
 }
 
@@ -86,21 +88,6 @@ export function useWorkOrders(search?: string) {
 
       // Adaptar datos del backend al formato esperado
       return data.map((wo: any) => {
-        const detallesArray = wo.detalles || wo.items || [];
-        if (import.meta.env.DEV) {
-          console.log("🔍 Procesando orden:", {
-            id: wo.id,
-            numero_orden: wo.numero_orden_papel,
-            tiene_items: !!wo.items,
-            tiene_detalles: !!wo.detalles,
-            items_count: (wo.items || []).length,
-            detalles_count: (wo.detalles || []).length,
-            detalles_finales: detallesArray.length,
-            raw_items: wo.items,
-            raw_detalles: wo.detalles,
-          });
-        }
-
         return {
           id: wo.id?.toString() || wo.id,
           numero_orden_papel: wo.numero_orden_papel || 0,
@@ -128,13 +115,14 @@ export function useWorkOrders(search?: string) {
             nombre: (wo.cliente?.nombre || wo.client?.nombre || wo.client?.name),
             rut: (wo.cliente?.rut || wo.client?.rut),
             telefono: (wo.cliente?.telefono || wo.client?.telefono || wo.client?.phone),
+            email: (wo.cliente?.email || wo.client?.email),
           } : {
             id: "1",
             nombre: "Sin cliente",
             rut: null,
             telefono: null,
+            email: null,
           },
-          mecanico_asignado: wo.realizado_por ? { nombre: wo.realizado_por } : null,
           detalles: (wo.detalles || wo.items || []).map((item: any) => ({
             id: item.id?.toString() || Math.random().toString(),
             servicio_nombre: item.servicio_nombre || item.nombre || "Sin nombre",
@@ -145,6 +133,7 @@ export function useWorkOrders(search?: string) {
               id: item.producto?.id || item.product_id || "0",
               sku: item.producto?.sku || item.product_sku || "",
               nombre: item.producto?.nombre || item.product_nombre || "",
+              stock_actual: item.producto?.stock_actual || 0
             } : null,
           })),
           createdByName: wo.realizado_por || "",
@@ -182,27 +171,15 @@ export function useCreateWorkOrder() {
         body: JSON.stringify(data),
       });
 
-      if (import.meta.env.DEV) {
-        console.log("📥 Respuesta del backend - Status:", res.status, res.statusText);
-      }
-
       if (!res.ok) {
         const errorText = await res.text();
-        if (import.meta.env.DEV) {
-          console.error("❌ Error del backend:", errorText);
-        }
-
         let errorMessage = "Error al crear orden de trabajo";
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.message || errorJson.error || errorMessage;
-          if (import.meta.env.DEV) {
-            console.error("❌ Error parseado:", errorJson);
-          }
         } catch {
           errorMessage = errorText || errorMessage;
         }
-
         throw new Error(errorMessage);
       }
 
@@ -210,7 +187,6 @@ export function useCreateWorkOrder() {
       return responseData;
     },
     onSuccess: () => {
-      // Invalidar todas las queries relacionadas
       queryClient.invalidateQueries({ queryKey: ["work-orders"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });
@@ -230,13 +206,15 @@ export function useCreateWorkOrder() {
 
 export function useUpdateWorkOrder() {
   const queryClient = useQueryClient();
+  // ✅ CORREGIDO: Ahora acepta { id, data } explícitamente para coincidir con el uso en WorkOrders.tsx
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string } & Partial<CreateWorkOrderDTO>) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateWorkOrderDTO> }) => {
       const res = await fetch(getApiUrl(`/work-orders/${id}`), {
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
+
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Error al actualizar orden");

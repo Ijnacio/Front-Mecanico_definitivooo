@@ -1,12 +1,13 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Eye, Car, ArrowUpDown } from "lucide-react"
+import { Eye, Car, ArrowUpDown, Pencil } from "lucide-react" // <--- Agregamos Pencil
 import { WorkOrder } from "@/hooks/use-work-orders"
 import { formatRutCL } from "@/lib/utils"
 
 export const createColumns = (
-    onView: (wo: WorkOrder) => void
+    onView: (wo: WorkOrder) => void,
+    onEdit: (wo: WorkOrder) => void // <--- Nuevo parámetro para editar
 ): ColumnDef<WorkOrder>[] => [
         {
             accessorKey: "numero_orden_papel",
@@ -51,7 +52,7 @@ export const createColumns = (
             cell: ({ row }) => {
                 const wo = row.original as any;
                 const v = wo.vehiculo || {};
-                
+
                 const marca = v.marca || "";
                 const modelo = v.modelo || "";
                 const patente = wo.patente_vehiculo || v.patente || "";
@@ -143,15 +144,26 @@ export const createColumns = (
                 const wo = row.original
 
                 return (
-                    <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => onView(wo)}
-                        className="h-8 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    >
-                        <Eye className="mr-2 h-4 w-4" />
-                        Ver detalle
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onView(wo)}
+                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="Ver detalle"
+                        >
+                            <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEdit(wo)} // <--- Botón de editar
+                            className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                            title="Editar orden"
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                    </div>
                 )
             },
         },

@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { 
-  useWorkOrders, 
-  useDeleteWorkOrder, 
-  useCreateWorkOrder, 
-  useServicesCatalog, 
-  type CreateWorkOrderDTO, 
-  type WorkOrder 
+import {
+  useWorkOrders,
+  useDeleteWorkOrder,
+  useCreateWorkOrder,
+  useUpdateWorkOrder,
+  useServicesCatalog,
+  type CreateWorkOrderDTO,
+  type WorkOrder
 } from "@/hooks/use-work-orders";
 import { useVehicles } from "@/hooks/use-vehicles";
 import { useProducts } from "@/hooks/use-products";
@@ -21,8 +22,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { 
-  Car, User, Calendar, Filter, RefreshCcw, ChevronDown, 
+import {
+  Car, User, Calendar, Filter, RefreshCcw, ChevronDown,
   Wrench, Plus, Search, Loader2, ChevronUp, ChevronDown as ChevronDownIcon, Mail, Package, Trash2, Phone
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -50,6 +51,7 @@ export default function WorkOrders() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
+  const [editingOrder, setEditingOrder] = useState<WorkOrder | null>(null);
   const { data: workOrders = [], isLoading } = useWorkOrders();
   const { mutate: deleteWorkOrder } = useDeleteWorkOrder();
   const { data: vehicles = [] } = useVehicles();
@@ -100,7 +102,8 @@ export default function WorkOrders() {
   }, [ordersWithVehicleRef, search, statusFilter]);
 
   const columns = useMemo(() => createColumns(
-    (wo) => setSelectedOrder(wo)
+    (wo) => setSelectedOrder(wo),
+    (wo) => setEditingOrder(wo)
   ), []);
 
   const table = useReactTable({
@@ -128,6 +131,13 @@ export default function WorkOrders() {
         title="Órdenes de Trabajo"
         description="Gestione las órdenes de trabajo, seguimiento y facturación."
         action={<CreateWorkOrderDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />}
+      />
+
+      {/* Dialog de Edición */}
+      <CreateWorkOrderDialog
+        open={!!editingOrder}
+        onOpenChange={(open) => !open && setEditingOrder(null)}
+        initialData={editingOrder}
       />
 
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
@@ -415,13 +425,14 @@ export default function WorkOrders() {
   );
 }
 
-function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { mutate: createWorkOrder, isPending } = useCreateWorkOrder();
+function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: boolean; onOpenChange: (open: boolean) => void; initialData?: WorkOrder | null }) {
+  const { mutate: createWorkOrder, isPending: isCreating } = useCreateWorkOrder();
+  const { mutate: updateWorkOrder, isPending: isUpdating } = useUpdateWorkOrder();
   const { data: servicesCatalog = [] } = useServicesCatalog();
   const { data: allProducts = [] } = useProducts();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Array<{ sku: string; nombre: string; cantidad: number; precio: number; stock: number }>>([]);
 
@@ -433,45 +444,47 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
     },
   });
 
+  const isPending = isCreating || isUpdating;
+
   // Helpers de Formateo
   const formatRut = (value: string) => {
     // Eliminar todo excepto números y K
     const clean = value.replace(/[^0-9kK]/g, "").toUpperCase();
     if (!clean) return "";
-    
+
     // Separar cuerpo y dígito verificador
     const body = clean.slice(0, -1);
     const dv = clean.slice(-1);
-    
+
     if (!body) return clean;
-    
+
     // Formatear cuerpo con puntos (de derecha a izquierda)
     const reversedBody = body.split("").reverse().join("");
     const formatted = reversedBody.match(/.{1,3}/g)?.join(".") || "";
     const finalBody = formatted.split("").reverse().join("");
-    
+
     return `${finalBody}-${dv}`;
   };
 
   const formatPhone = (value: string) => {
     // Eliminar todo excepto números y el símbolo +
     let clean = value.replace(/[^0-9+]/g, "");
-    
+
     // Si empieza con +56, mantenerlo
     if (clean.startsWith("+56")) {
       return clean;
     }
-    
+
     // Si empieza con 56, agregar +
     if (clean.startsWith("56")) {
       return `+${clean}`;
     }
-    
+
     // Si empieza con +, quitarlo y agregar +56
     if (clean.startsWith("+")) {
       clean = clean.slice(1);
     }
-    
+
     // Si no empieza con nada o solo tiene números, agregar +56
     return clean ? `+56${clean}` : "+56";
   };
@@ -488,21 +501,21 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   };
 
   const formatKilometraje = (value: string) => {
-  // Elimina cualquier caracter que no sea número
-  const clean = value.replace(/\D/g, "");
-  if (!clean || clean === "0") return "";
-  
-  // Aplica el formato de puntos según el estándar es-CL
-  return Number(clean).toLocaleString("es-CL");
+    // Elimina cualquier caracter que no sea número
+    const clean = value.replace(/\D/g, "");
+    if (!clean || clean === "0") return "";
+
+    // Aplica el formato de puntos según el estándar es-CL
+    return Number(clean).toLocaleString("es-CL");
   };
 
   const capitalize = (text: string) => {
     return text.replace(/\b\w/g, char => char.toUpperCase());
   };
 
-  const [services, setServices] = useState<Record<string, { 
-    checked: boolean; 
-    precio: number; 
+  const [services, setServices] = useState<Record<string, {
+    checked: boolean;
+    precio: number;
     descripcion: string;
   }>>({});
 
@@ -513,6 +526,75 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
       setServices(initial);
     }
   }, [servicesCatalog]);
+
+  // ✅ Cargar datos cuando estamos en modo edición
+  useEffect(() => {
+    if (initialData && servicesCatalog.length > 0) {
+      // Formatear teléfono (remover +56 9 para mostrar solo los 8 dígitos)
+      let telefonoFormateado = "";
+      if (initialData.cliente.telefono) {
+        const cleanPhone = initialData.cliente.telefono.replace(/\s/g, "");
+        if (cleanPhone.startsWith("+569")) {
+          telefonoFormateado = cleanPhone.substring(4); // Quitar +569
+        } else if (cleanPhone.startsWith("+56")) {
+          telefonoFormateado = cleanPhone.substring(3); // Quitar +56
+        } else {
+          telefonoFormateado = cleanPhone;
+        }
+      }
+
+      // Resetear formulario con los datos de la orden
+      form.reset({
+        numero_orden_papel: initialData.numero_orden_papel,
+        realizado_por: initialData.realizado_por || "",
+        revisado_por: initialData.revisado_por || "",
+        cliente_rut: initialData.cliente.rut || "",
+        cliente_nombre: initialData.cliente.nombre || "",
+        cliente_email: initialData.cliente.email || "",
+        cliente_telefono: telefonoFormateado,
+        vehiculo_patente: initialData.vehiculo?.patente || initialData.patente_vehiculo || "",
+        vehiculo_marca: initialData.vehiculo?.marca || "",
+        vehiculo_modelo: initialData.vehiculo?.modelo || "",
+        vehiculo_km: initialData.vehiculo?.kilometraje || initialData.kilometraje || 0,
+      });
+
+      // Procesar detalles para separar servicios y productos
+      const servicesState: any = {};
+      const productsArray: Array<{ sku: string; nombre: string; cantidad: number; precio: number; stock: number }> = [];
+
+      // Inicializar todos los servicios como no marcados
+      servicesCatalog.forEach(s => {
+        servicesState[s] = { checked: false, precio: 0, descripcion: "" };
+      });
+
+      // Procesar cada detalle
+      initialData.detalles.forEach((detalle) => {
+        if (detalle.producto) {
+          // Es un producto/repuesto
+          productsArray.push({
+            sku: detalle.producto.sku,
+            nombre: detalle.producto.nombre,
+            cantidad: detalle.cantidad || 1,
+            precio: detalle.precio,
+            stock: detalle.producto.stock_actual || 0
+          });
+        } else {
+          // Es un servicio (mano de obra)
+          const serviceName = detalle.servicio_nombre;
+          if (servicesCatalog.includes(serviceName)) {
+            servicesState[serviceName] = {
+              checked: true,
+              precio: detalle.precio,
+              descripcion: detalle.descripcion || ""
+            };
+          }
+        }
+      });
+
+      setServices(servicesState);
+      setSelectedProducts(productsArray);
+    }
+  }, [initialData, servicesCatalog, form]);
 
   const calcularTotal = () => {
     const totalServicios = Object.values(services).reduce((t, s) => s.checked ? t + s.precio : t, 0);
@@ -570,7 +652,7 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
         descripcion: s.descripcion || "",
         precio: s.precio
       }));
-    
+
     const productosItems = selectedProducts.map(p => ({
       servicio_nombre: p.nombre,
       descripcion: `Repuesto: ${p.nombre}`,
@@ -578,7 +660,7 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
       product_sku: p.sku,
       cantidad: p.cantidad
     }));
-    
+
     const items = [...serviciosItems, ...productosItems];
 
     // ✅ VALIDACIÓN 3: Al menos un servicio o repuesto
@@ -635,7 +717,7 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
       return;
     }
 
-    createWorkOrder({
+    const payload = {
       numero_orden_papel: data.numero_orden_papel,
       realizado_por: data.realizado_por,
       // Solo enviar revisado_por si tiene contenido
@@ -648,45 +730,87 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
         // Solo enviar teléfono si tiene contenido válido (concatenar +56 9 con los 8 dígitos)
         ...(data.cliente_telefono.trim() && { telefono: `+56 9${data.cliente_telefono.trim()}` })
       },
-      vehiculo: { 
+      vehiculo: {
         patente: data.vehiculo_patente.replace(/-/g, "").toUpperCase().trim(),
-        marca: data.vehiculo_marca.trim(), 
-        modelo: data.vehiculo_modelo.trim(), 
-        kilometraje: data.vehiculo_km 
+        marca: data.vehiculo_marca.trim(),
+        modelo: data.vehiculo_modelo.trim(),
+        kilometraje: data.vehiculo_km
       },
       items
-    }, {
-      onSuccess: () => {
-        toast({ 
-          title: "✅ Orden creada exitosamente",
-          className: "bg-emerald-50 text-emerald-900 border-emerald-200"
-        });
-        onOpenChange(false);
-        form.reset();
-        
-        // Limpiar servicios marcados
-        const cleanServices: any = {};
-        servicesCatalog.forEach(s => { 
-          cleanServices[s] = { checked: false, precio: 0, descripcion: "" }; 
-        });
-        setServices(cleanServices);
-        
-        // Limpiar productos seleccionados
-        setSelectedProducts([]);
-        
-        queryClient.invalidateQueries({ queryKey: ["/work-orders"] });
-      },
-      onError: (err: any) => {
-        toast({
-          title: "❌ Error al crear orden",
-          description: err.message || "Ocurrió un problema al crear la orden de trabajo. Verifica los datos.",
-          variant: "destructive",
-          duration: 8000,
-          className: "bg-red-600 border-red-700 text-white [&>div]:text-white"
-        });
-        // NO cerrar modal, NO limpiar formulario - permitir corrección
-      }
-    });
+    };
+
+    // ✅ Diferenciar entre crear y actualizar
+    if (initialData) {
+      // Modo edición
+      updateWorkOrder({
+        id: initialData.id,
+        data: payload
+      }, {
+        onSuccess: () => {
+          toast({
+            title: "✅ Orden actualizada exitosamente",
+            className: "bg-emerald-50 text-emerald-900 border-emerald-200"
+          });
+          onOpenChange(false);
+          form.reset();
+
+          // Limpiar servicios marcados
+          const cleanServices: any = {};
+          servicesCatalog.forEach(s => {
+            cleanServices[s] = { checked: false, precio: 0, descripcion: "" };
+          });
+          setServices(cleanServices);
+
+          // Limpiar productos seleccionados
+          setSelectedProducts([]);
+
+          queryClient.invalidateQueries({ queryKey: ["work-orders"] });
+        },
+        onError: (err: any) => {
+          toast({
+            title: "❌ Error al actualizar orden",
+            description: err.message || "Ocurrió un problema al actualizar la orden de trabajo. Verifica los datos.",
+            variant: "destructive",
+            duration: 8000,
+            className: "bg-red-600 border-red-700 text-white [&>div]:text-white"
+          });
+        }
+      });
+    } else {
+      // Modo creación
+      createWorkOrder(payload, {
+        onSuccess: () => {
+          toast({
+            title: "✅ Orden creada exitosamente",
+            className: "bg-emerald-50 text-emerald-900 border-emerald-200"
+          });
+          onOpenChange(false);
+          form.reset();
+
+          // Limpiar servicios marcados
+          const cleanServices: any = {};
+          servicesCatalog.forEach(s => {
+            cleanServices[s] = { checked: false, precio: 0, descripcion: "" };
+          });
+          setServices(cleanServices);
+
+          // Limpiar productos seleccionados
+          setSelectedProducts([]);
+
+          queryClient.invalidateQueries({ queryKey: ["/work-orders"] });
+        },
+        onError: (err: any) => {
+          toast({
+            title: "❌ Error al crear orden",
+            description: err.message || "Ocurrió un problema al crear la orden de trabajo. Verifica los datos.",
+            variant: "destructive",
+            duration: 8000,
+            className: "bg-red-600 border-red-700 text-white [&>div]:text-white"
+          });
+          // NO cerrar modal, NO limpiar formulario - permitir corrección
+        }
+      });
+    }
   };
 
   return (
@@ -697,7 +821,7 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-amber-50 border-slate-300 shadow-xl">
-        <DialogHeader><DialogTitle>Crear Orden de Trabajo</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{initialData ? "Editar Orden de Trabajo" : "Crear Orden de Trabajo"}</DialogTitle></DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-lg border">
@@ -707,9 +831,9 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               <FormField control={form.control} name="realizado_por" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Realizado Por</FormLabel>
-                  <Input 
-                    placeholder="Nombre Mecánico" 
-                    {...field} 
+                  <Input
+                    placeholder="Nombre Mecánico"
+                    {...field}
                     onChange={e => field.onChange(e.target.value.replace(/[0-9]/g, ""))}
                     onBlur={e => field.onChange(capitalize(e.target.value))}
                   />
@@ -718,9 +842,9 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               <FormField control={form.control} name="revisado_por" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Revisado Por</FormLabel>
-                  <Input 
-                    placeholder="Opcional" 
-                    {...field} 
+                  <Input
+                    placeholder="Opcional"
+                    {...field}
                     onChange={e => field.onChange(e.target.value.replace(/[0-9]/g, ""))}
                     onBlur={e => field.onChange(capitalize(e.target.value))}
                   />
@@ -730,24 +854,26 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
 
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-3 p-6 border-2 border-blue-200 rounded-xl bg-blue-50 shadow-sm">
-                <h3 className="font-bold text-sm text-slate-700 flex items-center gap-2"><User className="w-4 h-4 text-blue-500"/> DATOS DEL CLIENTE</h3>
+                <h3 className="font-bold text-sm text-slate-700 flex items-center gap-2"><User className="w-4 h-4 text-blue-500" /> DATOS DEL CLIENTE</h3>
                 <div className="grid grid-cols-1 gap-3">
                   <FormField control={form.control} name="cliente_nombre" render={({ field }) => (
-                    <Input 
-                      placeholder="Nombre Completo" 
-                      {...field} 
+                    <Input
+                      placeholder="Nombre Completo"
+                      {...field}
+                      disabled={!!initialData}
                       onChange={e => field.onChange(e.target.value.replace(/[0-9]/g, ""))}
                       onBlur={e => field.onChange(capitalize(e.target.value))}
                     />
                   )} />
                   <div className="flex gap-2">
                     <FormField control={form.control} name="cliente_rut" render={({ field }) => (
-                      <Input 
-                        placeholder="12.345.678-9" 
-                        className="flex-1" 
+                      <Input
+                        placeholder="12.345.678-9"
+                        className="flex-1"
                         {...field}
                         maxLength={12}
-                        onChange={e => field.onChange(formatRut(e.target.value))} 
+                        disabled={!!initialData}
+                        onChange={e => field.onChange(formatRut(e.target.value))}
                       />
                     )} />
                     <FormField control={form.control} name="cliente_telefono" render={({ field }) => (
@@ -755,11 +881,12 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium pointer-events-none select-none">
                           +56 9
                         </div>
-                        <Input 
-                          placeholder="12345678" 
-                          className="pl-16 font-mono" 
+                        <Input
+                          placeholder="12345678"
+                          className="pl-16 font-mono"
                           {...field}
                           maxLength={8}
+                          disabled={!!initialData}
                           onChange={(e) => {
                             const value = e.target.value.replace(/[^0-9]/g, "");
                             field.onChange(value);
@@ -771,53 +898,57 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                   <FormField control={form.control} name="cliente_email" render={({ field }) => (
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <Input placeholder="Correo Electrónico (Opcional)" className="pl-10" {...field} />
+                      <Input placeholder="Correo Electrónico (Opcional)" className="pl-10" {...field} disabled={!!initialData} />
                     </div>
                   )} />
                 </div>
               </div>
 
               <div className="space-y-3 p-6 border-2 border-blue-200 rounded-xl bg-blue-50 shadow-sm">
-                <h3 className="font-bold text-sm text-slate-700 flex items-center gap-2"><Car className="w-4 h-4 text-blue-500"/> DATOS DEL VEHÍCULO</h3>
+                <h3 className="font-bold text-sm text-slate-700 flex items-center gap-2"><Car className="w-4 h-4 text-blue-500" /> DATOS DEL VEHÍCULO</h3>
                 <div className="grid grid-cols-1 gap-3">
                   <FormField control={form.control} name="vehiculo_patente" render={({ field }) => (
-                    <Input 
-                      placeholder="PTCL23 o PT-CL-23" 
-                      className="uppercase font-mono" 
-                      {...field} 
+                    <Input
+                      placeholder="PTCL23 o PT-CL-23"
+                      className="uppercase font-mono"
+                      {...field}
                       maxLength={9}
+                      disabled={!!initialData}
                       onChange={e => field.onChange(formatPatente(e.target.value.toUpperCase()))}
                     />
                   )} />
                   <div className="flex gap-2">
                     <FormField control={form.control} name="vehiculo_marca" render={({ field }) => (
-                      <Input 
-                        placeholder="Marca" 
-                        className="flex-1 uppercase" 
-                        {...field} 
+                      <Input
+                        placeholder="Marca"
+                        className="flex-1 uppercase"
+                        {...field}
+                        disabled={!!initialData}
                         onChange={e => field.onChange(e.target.value.replace(/[0-9]/g, "").toUpperCase())}
                       />
                     )} />
                     <FormField control={form.control} name="vehiculo_modelo" render={({ field }) => (
-                      <Input 
-                        placeholder="Modelo" 
-                        className="flex-1 uppercase" 
+                      <Input
+                        placeholder="Modelo"
+                        className="flex-1 uppercase"
                         {...field}
+                        disabled={!!initialData}
                         onChange={e => field.onChange(e.target.value.toUpperCase())}
                       />
                     )} />
                   </div>
-                  <FormField 
-                    control={form.control} 
-                    name="vehiculo_km" 
+                  <FormField
+                    control={form.control}
+                    name="vehiculo_km"
                     render={({ field }) => (
                       <div className="relative">
                         <RefreshCcw className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <Input 
+                        <Input
                           type="text" // Cambiamos a text para permitir los puntos visuales
-                          placeholder="Kilometraje Actual" 
-                          className="pl-10" 
+                          placeholder="Kilometraje Actual"
+                          className="pl-10"
                           {...field}
+                          disabled={!!initialData}
                           // Si el valor es 0, enviamos string vacío para que se vea el placeholder
                           value={field.value === 0 ? "" : field.value.toLocaleString("es-CL")}
                           onChange={(e) => {
@@ -827,7 +958,7 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                           }}
                         />
                       </div>
-                    )} 
+                    )}
                   />
                 </div>
               </div>
@@ -850,26 +981,26 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                         {isChecked && (
                           <div className="relative w-36">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
-                            <Input 
-                              type="text" 
-                              placeholder="Precio" 
-                              className="pl-7 text-right font-bold text-primary" 
-                              value={services[serviceName].precio ? services[serviceName].precio.toLocaleString('es-CL') : ""} 
+                            <Input
+                              type="text"
+                              placeholder="Precio"
+                              className="pl-7 text-right font-bold text-primary"
+                              value={services[serviceName].precio ? services[serviceName].precio.toLocaleString('es-CL') : ""}
                               onChange={e => {
                                 const rawValue = e.target.value.replace(/\D/g, "");
                                 const numValue = parseInt(rawValue) || 0;
                                 setServices(p => ({ ...p, [serviceName]: { ...p[serviceName], precio: numValue } }));
-                              }} 
+                              }}
                             />
                           </div>
                         )}
                       </div>
                       {isChecked && (
-                        <Input 
-                          placeholder="Descripción del servicio..." 
-                          className="mt-3 bg-white/50 text-sm italic" 
-                          value={services[serviceName].descripcion} 
-                          onChange={e => setServices(p => ({ ...p, [serviceName]: { ...p[serviceName], descripcion: e.target.value } }))} 
+                        <Input
+                          placeholder="Descripción del servicio..."
+                          className="mt-3 bg-white/50 text-sm italic"
+                          value={services[serviceName].descripcion}
+                          onChange={e => setServices(p => ({ ...p, [serviceName]: { ...p[serviceName], descripcion: e.target.value } }))}
                         />
                       )}
                     </div>
@@ -882,7 +1013,7 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             <div className="space-y-4 bg-green-50 p-6 rounded-xl border-2 border-green-200 shadow-sm">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                  <Package className="w-5 h-5 text-green-600" /> 
+                  <Package className="w-5 h-5 text-green-600" />
                   REPUESTOS UTILIZADOS
                 </h3>
                 <Button
@@ -910,10 +1041,10 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                         <p className="text-xs text-slate-500">SKU: {prod.sku} • Stock disponible: {prod.stock}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="icon" 
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
                           className="h-8 w-8"
                           onClick={() => {
                             const updated = [...selectedProducts];
@@ -924,10 +1055,10 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                           <ChevronDownIcon className="w-4 h-4" />
                         </Button>
                         <span className="font-mono font-bold w-12 text-center">{prod.cantidad}</span>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="icon" 
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
                           className="h-8 w-8"
                           onClick={() => {
                             const updated = [...selectedProducts];
@@ -945,8 +1076,23 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                         >
                           <ChevronUp className="w-4 h-4" />
                         </Button>
-                        <span className="text-emerald-600 font-bold w-24 text-right">
-                          ${(prod.precio * prod.cantidad).toLocaleString('es-CL')}
+                        <div className="relative w-28">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 font-medium">$</span>
+                          <Input
+                            type="text"
+                            className="pl-7 pr-2 h-8 text-right font-bold text-emerald-600"
+                            value={prod.precio.toLocaleString('es-CL')}
+                            onChange={(e) => {
+                              const rawValue = e.target.value.replace(/\D/g, "");
+                              const numValue = parseInt(rawValue) || 0;
+                              const updated = [...selectedProducts];
+                              updated[idx].precio = numValue;
+                              setSelectedProducts(updated);
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs text-slate-500 w-14 text-right">
+                          x{prod.cantidad}
                         </span>
                         <Button
                           type="button"
@@ -972,23 +1118,23 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => {
                   // Limpiar formulario
                   form.reset();
-                  
+
                   // Limpiar servicios marcados
                   const cleanServices: any = {};
-                  servicesCatalog.forEach(s => { 
-                    cleanServices[s] = { checked: false, precio: 0, descripcion: "" }; 
+                  servicesCatalog.forEach(s => {
+                    cleanServices[s] = { checked: false, precio: 0, descripcion: "" };
                   });
                   setServices(cleanServices);
-                  
+
                   // Limpiar productos seleccionados
                   setSelectedProducts([]);
-                  
+
                   // Cerrar modal
                   onOpenChange(false);
                 }}
@@ -999,12 +1145,12 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                 {isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Creando...
+                    {initialData ? "Actualizando..." : "Creando..."}
                   </>
                 ) : (
                   <>
                     <Plus className="w-4 h-4" />
-                    Crear Orden de Trabajo
+                    {initialData ? "Actualizar Orden" : "Crear Orden de Trabajo"}
                   </>
                 )}
               </Button>
@@ -1012,7 +1158,7 @@ function CreateWorkOrderDialog({ open, onOpenChange }: { open: boolean; onOpenCh
           </form>
         </Form>
       </DialogContent>
-      
+
       <ProductSearchDialog
         open={productModalOpen}
         onClose={() => setProductModalOpen(false)}
