@@ -37,7 +37,7 @@ import { Loader2, Plus, DollarSign, Package } from "lucide-react";
 const productSchema = z.object({
   sku: z.string().min(1, "El SKU es obligatorio"),
   nombre: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
-  marca: z.string().min(1, "La marca es obligatoria"),
+  marca: z.string().optional(),
   calidad: z.string().optional(),
   precio_venta: z.coerce.number().min(1, "El precio debe ser mayor a 0"),
   stock_actual: z.coerce.number().min(0, "El stock no puede ser negativo"),
@@ -101,7 +101,7 @@ export function AddProductDialog({ open, onOpenChange, onProductCreated, fromPur
         setNetPriceDisplay("");
         setSelectedModels([]);
         onOpenChange(false);
-        
+
         if (onProductCreated) {
           onProductCreated(newProduct);
         }
@@ -376,7 +376,7 @@ function CreateCategoryModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!nombre.trim()) {
       toast({
         title: "Error",
