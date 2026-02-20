@@ -14,9 +14,9 @@ interface ProductSearchDialogProps {
   showOutOfStock?: boolean; // Nueva prop para mostrar productos sin stock
 }
 
-export function ProductSearchDialog({ 
-  open, 
-  onClose, 
+export function ProductSearchDialog({
+  open,
+  onClose,
   onSelect,
   title = "🔍 Seleccionar Repuesto",
   showOutOfStock = false
@@ -26,7 +26,7 @@ export function ProductSearchDialog({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<"all" | "in-stock" | "low" | "out-stock">("all");
-  
+
   const filteredProducts = useMemo(() => {
     let products = [...allProducts];
 
@@ -44,22 +44,22 @@ export function ProductSearchDialog({
         products = products.filter((p: any) => p.stock_actual === 0);
       }
     }
-    
+
     // Filtro de categoría
     if (selectedCategory) {
       products = products.filter((p: any) => p.categoria?.id === selectedCategory);
     }
-    
+
     // Filtro de búsqueda
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      products = products.filter((p: any) => 
-        p.nombre.toLowerCase().includes(query) || 
+      products = products.filter((p: any) =>
+        p.nombre.toLowerCase().includes(query) ||
         p.sku.toLowerCase().includes(query) ||
         (p.marca && p.marca.toLowerCase().includes(query))
       );
     }
-    
+
     return products;
   }, [allProducts, selectedCategory, searchQuery, showOutOfStock, stockFilter]);
 
@@ -74,7 +74,7 @@ export function ProductSearchDialog({
         <DialogHeader>
           <DialogTitle className="text-slate-800 font-bold">{title}</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           {/* Buscador */}
           <div className="relative">
@@ -118,12 +118,11 @@ export function ProductSearchDialog({
             {/* Filtro de Stock (solo si showOutOfStock es true) */}
             {showOutOfStock && (
               <Select value={stockFilter} onValueChange={(v: any) => setStockFilter(v)}>
-                <SelectTrigger className={`h-10 w-full md:w-[200px] border-dashed flex items-center transition-colors ${
-                  stockFilter === 'in-stock' ? 'bg-emerald-50 border-emerald-300 hover:bg-emerald-100' :
-                  stockFilter === 'low' ? 'bg-orange-50 border-orange-300 hover:bg-orange-100' :
-                  stockFilter === 'out-stock' ? 'bg-red-50 border-red-300 hover:bg-red-100' :
-                  'bg-slate-50 border-slate-300 hover:bg-slate-100'
-                }`}>
+                <SelectTrigger className={`h-10 w-full md:w-[200px] border-dashed flex items-center transition-colors ${stockFilter === 'in-stock' ? 'bg-emerald-50 border-emerald-300 hover:bg-emerald-100' :
+                    stockFilter === 'low' ? 'bg-orange-50 border-orange-300 hover:bg-orange-100' :
+                      stockFilter === 'out-stock' ? 'bg-red-50 border-red-300 hover:bg-red-100' :
+                        'bg-slate-50 border-slate-300 hover:bg-slate-100'
+                  }`}>
                   <SelectValue placeholder="Estado Stock" />
                 </SelectTrigger>
                 <SelectContent>
@@ -164,7 +163,7 @@ export function ProductSearchDialog({
               filteredProducts.map((product: any) => {
                 const outOfStock = product.stock_actual === 0;
                 const lowStock = product.stock_actual > 0 && product.stock_actual <= product.stock_minimo;
-                
+
                 return (
                   <button
                     key={product.id}
@@ -178,8 +177,8 @@ export function ProductSearchDialog({
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className={`font-semibold ${outOfStock ? 'text-slate-500' : 'text-slate-900'}`}>
-                            {product.nombre}
+                          <p className={`font-bold text-base font-mono tracking-wide ${outOfStock ? 'text-slate-400' : 'text-slate-800'}`}>
+                            {product.sku}
                           </p>
                           {outOfStock && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">
@@ -194,9 +193,10 @@ export function ProductSearchDialog({
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          SKU: {product.sku} • Stock: {product.stock_actual}
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {product.nombre}
                           {product.marca && ` • ${product.marca}`}
+                          {' '}· Stock: <span className={`font-semibold ${outOfStock ? 'text-red-500' : lowStock ? 'text-orange-500' : 'text-slate-600'}`}>{product.stock_actual}</span>
                         </p>
                         {product.categoria && (
                           <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
