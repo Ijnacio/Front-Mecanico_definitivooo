@@ -23,9 +23,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
-  Car, User, Calendar, Filter, RefreshCcw, ChevronDown,
+  Car, User, Calendar as CalendarIcon, Filter, RefreshCcw, ChevronDown,
   Wrench, Plus, Search, Loader2, ChevronUp, ChevronDown as ChevronDownIcon, Mail, Package, Trash2, Phone
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -434,12 +438,15 @@ function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: bool
   const queryClient = useQueryClient();
 
   const [productModalOpen, setProductModalOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Array<{ sku: string; nombre: string; cantidad: number; precio: number; stock: number }>>([]);
+
+  const todayStr = format(new Date(), "yyyy-MM-dd");
 
   const form = useForm({
     defaultValues: {
       numero_orden_papel: 0, realizado_por: "", revisado_por: "",
-      fecha_ingreso: "",
+      fecha_ingreso: todayStr,
       cliente_rut: "", cliente_nombre: "", cliente_email: "", cliente_telefono: "",
       vehiculo_patente: "", vehiculo_marca: "", vehiculo_modelo: "", vehiculo_km: 0,
     },
@@ -551,7 +558,7 @@ function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: bool
         revisado_por: initialData.revisado_por || "",
         fecha_ingreso: initialData.fecha_ingreso
           ? new Date(initialData.fecha_ingreso).toISOString().split('T')[0]
-          : "",
+          : todayStr,
         cliente_rut: initialData.cliente.rut || "",
         cliente_nombre: initialData.cliente.nombre || "",
         cliente_email: initialData.cliente.email || "",
@@ -726,8 +733,8 @@ function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: bool
       realizado_por: data.realizado_por,
       // Solo enviar revisado_por si tiene contenido
       ...(data.revisado_por?.trim() && { revisado_por: data.revisado_por.trim() }),
-      // Solo enviar fecha_ingreso si el usuario la seleccionó; si no, el backend usa la fecha actual
-      ...(data.fecha_ingreso?.trim() && { fecha_ingreso: data.fecha_ingreso }),
+      // Siempre enviar fecha_ingreso con hora del mediodía para evitar problemas de zona horaria
+      fecha_ingreso: `${data.fecha_ingreso}T12:00:00`,
       cliente: {
         nombre: data.cliente_nombre.trim(),
         rut: data.cliente_rut.replace(/\./g, "").replace(/-/g, "").toUpperCase().trim(),
@@ -887,17 +894,53 @@ function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: bool
                 </FormItem>
               )} />
               <FormField control={form.control} name="fecha_ingreso" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5" />
+                <FormItem className="flex flex-col">
+                  <FormLabel className="flex items-center gap-1 mb-1">
+                    <CalendarIcon className="w-3.5 h-3.5" />
                     Fecha Orden
-                    <span className="text-[10px] text-slate-400 font-normal">(opcional)</span>
                   </FormLabel>
-                  <Input
-                    type="date"
-                    {...field}
-                    max={new Date().toISOString().split('T')[0]}
-                  />
+                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal h-10"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value
+                          ? new Date(field.value + 'T12:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : "Seleccionar fecha"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value ? new Date(field.value + 'T12:00:00') : undefined}
+                        locale={es}
+                        onSelect={(date) => {
+                          if (date) {
+                            field.onChange(date.toISOString().split('T')[0]);
+                            setDatePickerOpen(false);
+                          }
+                        }}
+                        disabled={(date) => date > new Date()}
+                        initialFocus
+                      />
+                      {field.value !== todayStr && (
+                        <div className="p-3 pt-0 border-t">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-slate-500 text-xs"
+                            onClick={() => { field.onChange(todayStr); setDatePickerOpen(false); }}
+                          >
+                            Volver a hoy
+                          </Button>
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
                 </FormItem>
               )} />
             </div>
