@@ -59,6 +59,7 @@ export interface CreateWorkOrderDTO {
   };
   realizado_por?: string;
   revisado_por?: string;
+  fecha_ingreso?: string;
   items: {
     servicio_nombre: string;
     descripcion?: string;
@@ -92,7 +93,7 @@ export function useWorkOrders(search?: string) {
           id: wo.id?.toString() || wo.id,
           numero_orden_papel: wo.numero_orden_papel || 0,
           estado: wo.estado || "EN_PROCESO",
-          fecha_ingreso: wo.fecha_creacion || wo.createdAt || new Date().toISOString(),
+          fecha_ingreso: wo.fecha_ingreso || wo.createdAt || new Date().toISOString(),
           total_cobrado: wo.total_cobrado || 0,
           realizado_por: wo.realizado_por || "Sin asignar",
           revisado_por: wo.revisado_por || null,

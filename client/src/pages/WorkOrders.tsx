@@ -439,6 +439,7 @@ function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: bool
   const form = useForm({
     defaultValues: {
       numero_orden_papel: 0, realizado_por: "", revisado_por: "",
+      fecha_ingreso: "",
       cliente_rut: "", cliente_nombre: "", cliente_email: "", cliente_telefono: "",
       vehiculo_patente: "", vehiculo_marca: "", vehiculo_modelo: "", vehiculo_km: 0,
     },
@@ -548,6 +549,9 @@ function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: bool
         numero_orden_papel: initialData.numero_orden_papel,
         realizado_por: initialData.realizado_por || "",
         revisado_por: initialData.revisado_por || "",
+        fecha_ingreso: initialData.fecha_ingreso
+          ? new Date(initialData.fecha_ingreso).toISOString().split('T')[0]
+          : "",
         cliente_rut: initialData.cliente.rut || "",
         cliente_nombre: initialData.cliente.nombre || "",
         cliente_email: initialData.cliente.email || "",
@@ -722,6 +726,8 @@ function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: bool
       realizado_por: data.realizado_por,
       // Solo enviar revisado_por si tiene contenido
       ...(data.revisado_por?.trim() && { revisado_por: data.revisado_por.trim() }),
+      // Solo enviar fecha_ingreso si el usuario la seleccionó; si no, el backend usa la fecha actual
+      ...(data.fecha_ingreso?.trim() && { fecha_ingreso: data.fecha_ingreso }),
       cliente: {
         nombre: data.cliente_nombre.trim(),
         rut: data.cliente_rut.replace(/\./g, "").replace(/-/g, "").toUpperCase().trim(),
@@ -854,7 +860,7 @@ function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: bool
         <DialogHeader><DialogTitle>{initialData ? "Editar Orden de Trabajo" : "Crear Orden de Trabajo"}</DialogTitle></DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-lg border">
+            <div className="grid grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg border">
               <FormField control={form.control} name="numero_orden_papel" render={({ field }) => (
                 <FormItem><FormLabel>N° Orden Papel</FormLabel><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} /></FormItem>
               )} />
@@ -877,6 +883,20 @@ function CreateWorkOrderDialog({ open, onOpenChange, initialData }: { open: bool
                     {...field}
                     onChange={e => field.onChange(e.target.value.replace(/[0-9]/g, ""))}
                     onBlur={e => field.onChange(capitalize(e.target.value))}
+                  />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="fecha_ingreso" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Fecha Orden
+                    <span className="text-[10px] text-slate-400 font-normal">(opcional)</span>
+                  </FormLabel>
+                  <Input
+                    type="date"
+                    {...field}
+                    max={new Date().toISOString().split('T')[0]}
                   />
                 </FormItem>
               )} />
